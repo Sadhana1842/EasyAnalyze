@@ -22,85 +22,72 @@ if uploaded_file:
     date_range1 = st.sidebar.date_input("Date Range 1", value=(min_date, max_date), min_value=min_date, max_value=max_date)
     date_range2 = st.sidebar.date_input("Date Range 2", value=(min_date, max_date), min_value=min_date, max_value=max_date)
 
-    # ---------------- FILTERING LOGIC START ----------------
+    # ---------------- FILTERING LOGIC START (MULTISELECT VERSION) ----------------
     st.sidebar.markdown("### 🔍 Add Filters")
-
+    
     restricted_cols = [
         "recordeddate", "Sum of SurveyCount", "Sum of SurveyCount2",
         "Sum of TCR_Yes", "Sum of TCR_No", "Sum of CSAT_Num"
     ]
     available_dims = [col for col in df.columns if col not in restricted_cols]
-
-    # Use OrderedDict for deterministic order (keeps behavior stable across reruns)
+    
     if "active_filters" not in st.session_state:
         st.session_state.active_filters = OrderedDict()
-
-    # Display available dimension buttons (unchanged UI)
+    
+    # Display buttons for adding filters
     st.sidebar.markdown("**Available Dimensions**")
     cols = st.sidebar.columns(3)
     for i, col in enumerate(available_dims):
         if cols[i % 3].button(col, key=f"addbtn_{col}"):
             if col not in st.session_state.active_filters:
-                st.session_state.active_filters[col] = None
+                st.session_state.active_filters[col] = []
                 st.rerun()
-
-    # Build dependent selectboxes (value lists come from the df filtered by *other* active filters)
+    
+    # Build dependent multiselect boxes
     if st.session_state.active_filters:
         st.sidebar.markdown("### Active Filters")
-
+    
         for dim in list(st.session_state.active_filters.keys()):
-            # Build mask by applying all other active filters (string comparison to avoid dtype issues)
+            # Apply all other filters first
             mask = pd.Series(True, index=df.index)
-            for other_dim, other_val in st.session_state.active_filters.items():
+            for other_dim, other_vals in st.session_state.active_filters.items():
                 if other_dim == dim:
                     continue
-                if other_val is not None:
-                    mask &= df[other_dim].astype(str) == str(other_val)
-
+                if other_vals:
+                    mask &= df[other_dim].astype(str).isin([str(v) for v in other_vals])
+    
             temp_df = df.loc[mask]
-
-            # Get unique values for THIS column only from the already-filtered subset
-            possible_vals_raw = temp_df[dim].dropna().unique().tolist()
-            # Sort as strings for stable ordering
-            possible_vals = sorted([str(x) for x in possible_vals_raw], key=lambda x: x.lower())
-
-            current_val = None if st.session_state.active_filters[dim] is None else str(st.session_state.active_filters[dim])
-
-            # selectbox shows only values from this column (dependent on other filters)
-            try:
-                idx = 0 if current_val is None or current_val not in possible_vals else possible_vals.index(current_val) + 1
-            except Exception:
-                idx = 0
-
-            selected_val = st.sidebar.selectbox(
+    
+            # Get unique values for this filter
+            possible_vals = sorted(temp_df[dim].dropna().astype(str).unique().tolist(), key=lambda x: x.lower())
+    
+            selected_vals = st.sidebar.multiselect(
                 f"{dim} Filter",
-                ["All"] + possible_vals,
-                index=idx,
-                key=f"select_{dim}"
+                possible_vals,
+                default=st.session_state.active_filters[dim],
+                key=f"multi_{dim}"
             )
-
-            st.session_state.active_filters[dim] = None if selected_val == "All" else selected_val
-
-            # Reset / Remove buttons (unchanged UI)
+    
+            st.session_state.active_filters[dim] = selected_vals
+    
+            # Reset / Remove buttons
             reset_col, remove_col = st.sidebar.columns(2)
             if reset_col.button(f"🔁 Reset {dim}", key=f"reset_{dim}"):
-                st.session_state.active_filters[dim] = None
+                st.session_state.active_filters[dim] = []
                 st.rerun()
             if remove_col.button(f"❌ Remove {dim}", key=f"remove_{dim}"):
                 del st.session_state.active_filters[dim]
                 st.rerun()
     else:
-        st.sidebar.info("No dimensions selected. Click a dimension above to add it as a filter.")
-
-    # Apply all active filters to make the final filtered_df (compare as strings to match saved selections)
+        st.sidebar.info("You can start adding filters using the buttons above.")
+    
+    # Apply all active filters
     filtered_df = df.copy()
-    for dim, val in st.session_state.active_filters.items():
-        if val is not None:
-            filtered_df = filtered_df[filtered_df[dim].astype(str) == str(val)]
-
-    st.markdown("### 📊 Filtered Dataset Preview")
-    st.dataframe(filtered_df.head(10))
+    for dim, vals in st.session_state.active_filters.items():
+        if vals:
+            filtered_df = filtered_df[filtered_df[dim].astype(str).isin([str(v) for v in vals])]
     # ---------------- FILTERING LOGIC END ----------------
+
 
     # --- calculations (kept intact but with safe numeric coercion to prevent NoneType math errors) ---
     def calc_group_stats(dataframe, start_date, end_date, group_cols):
