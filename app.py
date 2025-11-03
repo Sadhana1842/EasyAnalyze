@@ -55,7 +55,11 @@ if uploaded_file:
                 if other_dim == dim:
                     continue
                 if other_val is not None:
-                    mask &= df[other_dim].astype(str).isin([str(v) for v in other_val])
+                    if isinstance(other_val, list):
+                        mask &= df[other_dim].astype(str).isin([str(v) for v in other_val])
+                    else:
+                        mask &= df[other_dim].astype(str).eq(str(other_val))
+
                     
             temp_df = df.loc[mask]
 
