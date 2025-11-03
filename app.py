@@ -55,8 +55,8 @@ if uploaded_file:
                 if other_dim == dim:
                     continue
                 if other_val is not None:
-                    mask &= df[other_dim].astype(str) == str(other_val)
-
+                    mask &= df[other_dim].astype(str).isin([str(v) for v in other_val])
+                    
             temp_df = df.loc[mask]
 
             # Get unique values for THIS column only from the already-filtered subset
