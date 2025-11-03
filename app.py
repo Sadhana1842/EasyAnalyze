@@ -213,6 +213,13 @@ if uploaded_file:
         st.header("Mix-shift and Score Impact Analysis")
         w1 = stats1.iloc[:-1].reset_index(drop=True)
         w2 = stats2.iloc[:-1].reset_index(drop=True)
+        
+        cols_to_num = ["TCR%", "CSAT%", "Sum of SurveyCount2", "Weightage (Sumproduct)"]
+        for df_ in [w1, w2]:
+            for c in cols_to_num:
+                if c in df_.columns:
+                    df_[c] = pd.to_numeric(df_[c], errors="coerce")
+
         w1["Mix Shift Impact"] = ((w1["TCR%"] / 100) * w2["Sum of SurveyCount2"]).round(2)
         w1["Score Impact"] = ((w1["Sum of SurveyCount2"] / 100) * w2["TCR%"]).round(2)
 
