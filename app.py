@@ -214,7 +214,7 @@ if uploaded_file:
         w1 = stats1.iloc[:-1].reset_index(drop=True)
         w2 = stats2.iloc[:-1].reset_index(drop=True)
         
-        cols_to_num = ["TCR%","CSAT%" , "Sum of SurveyCount1", "Sum of SurveyCount2", "Weighatge (Sumproduct)", "Impact %"]
+        cols_to_num = ["TCR%","CSAT%" , "Sum of SurveyCount", "Sum of SurveyCount2"]
         for c in cols_to_num:
             w1[c] = pd.to_numeric(w1[c], errors="coerce")
             w2[c] = pd.to_numeric(w2[c], errors="coerce")
@@ -257,4 +257,5 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
