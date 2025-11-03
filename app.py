@@ -31,11 +31,9 @@ if uploaded_file:
     ]
     available_dims = [col for col in df.columns if col not in restricted_cols]
 
-    # Use OrderedDict for deterministic order (keeps behavior stable across reruns)
     if "active_filters" not in st.session_state:
         st.session_state.active_filters = OrderedDict()
 
-    # Display available dimension buttons (unchanged UI)
     st.sidebar.markdown("**Available Dimensions**")
     cols = st.sidebar.columns(3)
     for i, col in enumerate(available_dims):
@@ -44,12 +42,12 @@ if uploaded_file:
                 st.session_state.active_filters[col] = None
                 st.rerun()
 
-    # Build dependent selectboxes (value lists come from the df filtered by *other* active filters)
+    # ✅ Updated dependent multi-filter logic
     if st.session_state.active_filters:
         st.sidebar.markdown("### Active Filters")
 
         for dim in list(st.session_state.active_filters.keys()):
-            # Build mask by applying all other active filters (string comparison to avoid dtype issues)
+            # Build mask by applying all other active filters
             mask = pd.Series(True, index=df.index)
             for other_dim, other_val in st.session_state.active_filters.items():
                 if other_val is not None:
@@ -58,34 +56,24 @@ if uploaded_file:
                     else:
                         mask &= df[other_dim].astype(str).eq(str(other_val))
 
-                    
             temp_df = df.loc[mask]
 
-            # Get unique values for THIS column only from the already-filtered subset
+            # Unique values for current dimension
             possible_vals_raw = temp_df[dim].dropna().unique().tolist()
-            # Sort as strings for stable ordering
             possible_vals = sorted([str(x) for x in possible_vals_raw], key=lambda x: x.lower())
 
-            current_val = None if st.session_state.active_filters[dim] is None else str(st.session_state.active_filters[dim])
+            # ✅ Use list default instead of string conversion
+            current_vals = [] if st.session_state.active_filters[dim] is None else st.session_state.active_filters[dim]
 
-            # selectbox shows only values from this column (dependent on other filters)
-            try:
-                idx = 0 if current_val is None or current_val not in possible_vals else possible_vals.index(current_val) + 1
-            except Exception:
-                idx = 0
-
-            # multi-select now instead of single selectbox
             selected_vals = st.sidebar.multiselect(
                 f"{dim} Filter (multi-select)",
                 options=possible_vals,
-                default=[] if st.session_state.active_filters[dim] is None else st.session_state.active_filters[dim],
+                default=current_vals,
                 key=f"multi_{dim}"
             )
 
             st.session_state.active_filters[dim] = None if not selected_vals else selected_vals
 
-
-            # Reset / Remove buttons (unchanged UI)
             reset_col, remove_col = st.sidebar.columns(2)
             if reset_col.button(f"🔁 Reset {dim}", key=f"reset_{dim}"):
                 st.session_state.active_filters[dim] = None
@@ -96,24 +84,19 @@ if uploaded_file:
     else:
         st.sidebar.info("No dimensions selected. Click a dimension above to add it as a filter.")
 
-    # Apply all active filters to make the final filtered_df (compare as strings to match saved selections)
     filtered_df = df.copy()
     for dim, val in st.session_state.active_filters.items():
         if val is not None:
-            # Convert both sides to string for consistent comparison
             filtered_df = filtered_df[filtered_df[dim].astype(str).isin([str(v) for v in val])]
-
 
     st.markdown("### 📊 Filtered Dataset Preview")
     st.dataframe(filtered_df.head(10))
     # ---------------- FILTERING LOGIC END ----------------
 
-    # --- calculations (kept intact but with safe numeric coercion to prevent NoneType math errors) ---
     def calc_group_stats(dataframe, start_date, end_date, group_cols):
         mask = (dataframe["recordeddate"] >= pd.to_datetime(start_date)) & (dataframe["recordeddate"] <= pd.to_datetime(end_date))
         filtered = dataframe.loc[mask].copy()
 
-        # SAFE COERCION: ensure numeric columns are numeric and NaNs -> 0 (does NOT change formulas, only avoids type errors)
         for col in ["Sum of SurveyCount", "Sum of TCR_Yes", "Sum of CSAT_Num"]:
             if col in filtered.columns:
                 filtered[col] = pd.to_numeric(filtered[col], errors="coerce").fillna(0)
@@ -130,7 +113,6 @@ if uploaded_file:
             .reset_index()
         )
 
-        # avoid division by zero
         if total_survey_count == 0:
             grouped["Sum of SurveyCount2"] = 0.0
         else:
@@ -143,7 +125,7 @@ if uploaded_file:
 
         total_row = pd.Series(
             {
-                group_cols[0]: "Grand Total",
+                group_cols[0]: "Grand Total" if group_cols else "Grand Total",
                 "Sum of SurveyCount": grouped["Sum of SurveyCount"].sum(),
                 "Sum of SurveyCount2": grouped["Sum of SurveyCount2"].sum(),
                 "TCR%": (grouped["Sum of TCR_Yes"].sum() / grouped["Sum of SurveyCount"].sum()) if grouped["Sum of SurveyCount"].sum() else 0.0,
@@ -156,12 +138,11 @@ if uploaded_file:
         return grouped
 
     try:
-        # If no filters are active, calculate overall stats (no grouping)
         active_keys = list(st.session_state.active_filters.keys())
         if active_keys:
             group_cols = active_keys
         else:
-            group_cols = []  # No grouping → aggregate entire table
+            group_cols = []
 
         stats1 = calc_group_stats(filtered_df, date_range1[0], date_range1[1], group_cols)
         stats2 = calc_group_stats(filtered_df, date_range2[0], date_range2[1], group_cols)
