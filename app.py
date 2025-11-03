@@ -22,72 +22,85 @@ if uploaded_file:
     date_range1 = st.sidebar.date_input("Date Range 1", value=(min_date, max_date), min_value=min_date, max_value=max_date)
     date_range2 = st.sidebar.date_input("Date Range 2", value=(min_date, max_date), min_value=min_date, max_value=max_date)
 
-    # ---------------- FILTERING LOGIC START (MULTISELECT VERSION) ----------------
+    # ---------------- FILTERING LOGIC START ----------------
     st.sidebar.markdown("### 🔍 Add Filters")
-    
+
     restricted_cols = [
         "recordeddate", "Sum of SurveyCount", "Sum of SurveyCount2",
         "Sum of TCR_Yes", "Sum of TCR_No", "Sum of CSAT_Num"
     ]
     available_dims = [col for col in df.columns if col not in restricted_cols]
-    
+
+    # Use OrderedDict for deterministic order (keeps behavior stable across reruns)
     if "active_filters" not in st.session_state:
         st.session_state.active_filters = OrderedDict()
-    
-    # Display buttons for adding filters
+
+    # Display available dimension buttons (unchanged UI)
     st.sidebar.markdown("**Available Dimensions**")
     cols = st.sidebar.columns(3)
     for i, col in enumerate(available_dims):
         if cols[i % 3].button(col, key=f"addbtn_{col}"):
             if col not in st.session_state.active_filters:
-                st.session_state.active_filters[col] = []
+                st.session_state.active_filters[col] = None
                 st.rerun()
-    
-    # Build dependent multiselect boxes
+
+    # Build dependent selectboxes (value lists come from the df filtered by *other* active filters)
     if st.session_state.active_filters:
         st.sidebar.markdown("### Active Filters")
-    
+
         for dim in list(st.session_state.active_filters.keys()):
-            # Apply all other filters first
+            # Build mask by applying all other active filters (string comparison to avoid dtype issues)
             mask = pd.Series(True, index=df.index)
-            for other_dim, other_vals in st.session_state.active_filters.items():
+            for other_dim, other_val in st.session_state.active_filters.items():
                 if other_dim == dim:
                     continue
-                if other_vals:
-                    mask &= df[other_dim].astype(str).isin([str(v) for v in other_vals])
-    
+                if other_val is not None:
+                    mask &= df[other_dim].astype(str) == str(other_val)
+
             temp_df = df.loc[mask]
-    
-            # Get unique values for this filter
-            possible_vals = sorted(temp_df[dim].dropna().astype(str).unique().tolist(), key=lambda x: x.lower())
-    
-            selected_vals = st.sidebar.multiselect(
+
+            # Get unique values for THIS column only from the already-filtered subset
+            possible_vals_raw = temp_df[dim].dropna().unique().tolist()
+            # Sort as strings for stable ordering
+            possible_vals = sorted([str(x) for x in possible_vals_raw], key=lambda x: x.lower())
+
+            current_val = None if st.session_state.active_filters[dim] is None else str(st.session_state.active_filters[dim])
+
+            # selectbox shows only values from this column (dependent on other filters)
+            try:
+                idx = 0 if current_val is None or current_val not in possible_vals else possible_vals.index(current_val) + 1
+            except Exception:
+                idx = 0
+
+            selected_val = st.sidebar.selectbox(
                 f"{dim} Filter",
-                possible_vals,
-                default=st.session_state.active_filters[dim],
-                key=f"multi_{dim}"
+                ["All"] + possible_vals,
+                index=idx,
+                key=f"select_{dim}"
             )
-    
-            st.session_state.active_filters[dim] = selected_vals
-    
-            # Reset / Remove buttons
+
+            st.session_state.active_filters[dim] = None if selected_val == "All" else selected_val
+
+            # Reset / Remove buttons (unchanged UI)
             reset_col, remove_col = st.sidebar.columns(2)
             if reset_col.button(f"🔁 Reset {dim}", key=f"reset_{dim}"):
-                st.session_state.active_filters[dim] = []
+                st.session_state.active_filters[dim] = None
                 st.rerun()
             if remove_col.button(f"❌ Remove {dim}", key=f"remove_{dim}"):
                 del st.session_state.active_filters[dim]
                 st.rerun()
     else:
-        st.sidebar.info("You can start adding filters using the buttons above.")
-    
-    # Apply all active filters
-    filtered_df = df.copy()
-    for dim, vals in st.session_state.active_filters.items():
-        if vals:
-            filtered_df = filtered_df[filtered_df[dim].astype(str).isin([str(v) for v in vals])]
-    # ---------------- FILTERING LOGIC END ----------------
+        st.sidebar.info("No dimensions selected. Click a dimension above to add it as a filter.")
 
+    # Apply all active filters to make the final filtered_df (compare as strings to match saved selections)
+    filtered_df = df.copy()
+    for dim, val in st.session_state.active_filters.items():
+        if val is not None:
+            filtered_df = filtered_df[filtered_df[dim].astype(str) == str(val)]
+
+    st.markdown("### 📊 Filtered Dataset Preview")
+    st.dataframe(filtered_df.head(10))
+    # ---------------- FILTERING LOGIC END ----------------
 
     # --- calculations (kept intact but with safe numeric coercion to prevent NoneType math errors) ---
     def calc_group_stats(dataframe, start_date, end_date, group_cols):
@@ -137,35 +150,17 @@ if uploaded_file:
         return grouped
 
     try:
-        active_keys = [k for k, v in st.session_state.active_filters.items() if v]  # Only filters that have values
-    
+        # If no filters are active, calculate overall stats (no grouping)
+        active_keys = list(st.session_state.active_filters.keys())
         if active_keys:
             group_cols = active_keys
-            stats1 = calc_group_stats(filtered_df, date_range1[0], date_range1[1], group_cols)
-            stats2 = calc_group_stats(filtered_df, date_range2[0], date_range2[1], group_cols)
         else:
-            # No filters selected → show full dataset totals only (no grouping)
-            def calc_overall_stats(dataframe, start_date, end_date):
-                mask = (dataframe["recordeddate"] >= pd.to_datetime(start_date)) & (dataframe["recordeddate"] <= pd.to_datetime(end_date))
-                df_sub = dataframe.loc[mask].copy()
-                for col in ["Sum of SurveyCount", "Sum of TCR_Yes", "Sum of CSAT_Num"]:
-                    if col in df_sub.columns:
-                        df_sub[col] = pd.to_numeric(df_sub[col], errors="coerce").fillna(0)
-                total_surveys = df_sub["Sum of SurveyCount"].sum()
-                tcr = df_sub["Sum of TCR_Yes"].sum() / total_surveys * 100 if total_surveys else 0
-                csat = df_sub["Sum of CSAT_Num"].sum() / total_surveys * 100 if total_surveys else 0
-                return pd.DataFrame([{
-                    "Metric": "Overall (No Filters Applied)",
-                    "Sum of SurveyCount": total_surveys,
-                    "TCR%": tcr,
-                    "CSAT%": csat
-                }])
-            
-            stats1 = calc_overall_stats(filtered_df, date_range1[0], date_range1[1])
-            stats2 = calc_overall_stats(filtered_df, date_range2[0], date_range2[1])
+            group_cols = []  # No grouping → aggregate entire table
+
+        stats1 = calc_group_stats(filtered_df, date_range1[0], date_range1[1], group_cols)
+        stats2 = calc_group_stats(filtered_df, date_range2[0], date_range2[1], group_cols)
     except Exception as e:
         st.error(f"Can't calculate tables: {e}")
-
 
     tab1, tab2, tab3 = st.tabs(["Comparison Table", "Over all Impact Analysis", "Score and Mix Shift Impact Analysis"])
     with tab1:
@@ -218,12 +213,6 @@ if uploaded_file:
         st.header("Mix-shift and Score Impact Analysis")
         w1 = stats1.iloc[:-1].reset_index(drop=True)
         w2 = stats2.iloc[:-1].reset_index(drop=True)
-        
-        cols_to_num = ["TCR%","CSAT%" , "Sum of SurveyCount", "Sum of SurveyCount2"]
-        for c in cols_to_num:
-            w1[c] = pd.to_numeric(w1[c], errors="coerce")
-            w2[c] = pd.to_numeric(w2[c], errors="coerce")
-
         w1["Mix Shift Impact"] = ((w1["TCR%"] / 100) * w2["Sum of SurveyCount2"]).round(2)
         w1["Score Impact"] = ((w1["Sum of SurveyCount2"] / 100) * w2["TCR%"]).round(2)
 
@@ -262,7 +251,4 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
-
-
-
 
