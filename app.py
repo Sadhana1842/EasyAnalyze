@@ -108,7 +108,7 @@ if uploaded_file:
         filtered = dataframe.loc[mask].copy()
 
         # SAFE COERCION: ensure numeric columns are numeric and NaNs -> 0 (does NOT change formulas, only avoids type errors)
-        for col in ["Sum of SurveyCount", "Sum of TCR_Yes", "Sum of CSAT_Num","Sum of TCR_No"]:
+        for col in ["Sum of SurveyCount", "Sum of TCR_Yes", "Sum of CSAT_Num"]:
             if col in filtered.columns:
                 filtered[col] = pd.to_numeric(filtered[col], errors="coerce").fillna(0)
 
@@ -150,40 +150,17 @@ if uploaded_file:
         return grouped
 
     try:
-        active_keys = [k for k, v in st.session_state.active_filters.items() if v]
-    
+        # If no filters are active, calculate overall stats (no grouping)
+        active_keys = list(st.session_state.active_filters.keys())
         if active_keys:
             group_cols = active_keys
-            stats1 = calc_group_stats(filtered_df, date_range1[0], date_range1[1], group_cols)
-            stats2 = calc_group_stats(filtered_df, date_range2[0], date_range2[1], group_cols)
         else:
-            # no filters → overall stats for entire dataset
-            def calc_overall_stats(dataframe, start_date, end_date):
-                mask = (dataframe["recordeddate"] >= pd.to_datetime(start_date)) & (
-                    dataframe["recordeddate"] <= pd.to_datetime(end_date)
-                )
-                df_sub = dataframe.loc[mask].copy()
-                for col in ["Sum of SurveyCount", "Sum of TCR_Yes", "Sum of CSAT_Num"]:
-                    if col in df_sub.columns:
-                        df_sub[col] = pd.to_numeric(df_sub[col], errors="coerce").fillna(0)
-                total_surveys = df_sub["Sum of SurveyCount"].sum()
-                tcr = df_sub["Sum of TCR_Yes"].sum() / total_surveys * 100 if total_surveys else 0
-                csat = df_sub["Sum of CSAT_Num"].sum() / total_surveys * 100 if total_surveys else 0
-                return pd.DataFrame([
-                    {
-                        "Metric": "Overall (No Filters Applied)",
-                        "Sum of SurveyCount": total_surveys,
-                        "TCR%": tcr,
-                        "CSAT%": csat,
-                    }
-                ])
-    
-            stats1 = calc_overall_stats(filtered_df, date_range1[0], date_range1[1])
-            stats2 = calc_overall_stats(filtered_df, date_range2[0], date_range2[1])
-            group_cols = ["Metric"]  # to keep merge logic working later
+            group_cols = []  # No grouping → aggregate entire table
+
+        stats1 = calc_group_stats(filtered_df, date_range1[0], date_range1[1], group_cols)
+        stats2 = calc_group_stats(filtered_df, date_range2[0], date_range2[1], group_cols)
     except Exception as e:
         st.error(f"Can't calculate tables: {e}")
-
 
     tab1, tab2, tab3 = st.tabs(["Comparison Table", "Over all Impact Analysis", "Score and Mix Shift Impact Analysis"])
     with tab1:
@@ -236,12 +213,6 @@ if uploaded_file:
         st.header("Mix-shift and Score Impact Analysis")
         w1 = stats1.iloc[:-1].reset_index(drop=True)
         w2 = stats2.iloc[:-1].reset_index(drop=True)
-
-        cols_to_num = ["TCR%", "CSAT%" "Sum of SurveyCount", "Sum of SurveyCount2"]
-        for c in cols_to_num:
-            w1[c] = pd.to_numeric(w1[c], errors="coerce")
-            w2[c] = pd.to_numeric(w2[c], errors="coerce")
-
         w1["Mix Shift Impact"] = ((w1["TCR%"] / 100) * w2["Sum of SurveyCount2"]).round(2)
         w1["Score Impact"] = ((w1["Sum of SurveyCount2"] / 100) * w2["TCR%"]).round(2)
 
@@ -280,6 +251,3 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
-
-
-
