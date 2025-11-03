@@ -108,7 +108,7 @@ if uploaded_file:
         filtered = dataframe.loc[mask].copy()
 
         # SAFE COERCION: ensure numeric columns are numeric and NaNs -> 0 (does NOT change formulas, only avoids type errors)
-        for col in ["Sum of SurveyCount", "Sum of TCR_Yes", "Sum of CSAT_Num"]:
+        for col in ["Sum of SurveyCount", "Sum of TCR_Yes", "Sum of CSAT_Num","Sum of TCR_No"]:
             if col in filtered.columns:
                 filtered[col] = pd.to_numeric(filtered[col], errors="coerce").fillna(0)
 
@@ -213,6 +213,12 @@ if uploaded_file:
         st.header("Mix-shift and Score Impact Analysis")
         w1 = stats1.iloc[:-1].reset_index(drop=True)
         w2 = stats2.iloc[:-1].reset_index(drop=True)
+
+        cols_to_num = ["TCR%", "CSAT%" "Sum of SurveyCount", "Sum of SurveyCount2"]
+        for c in cols_to_num:
+            w1[c] = pd.to_numeric(w1[c], errors="coerce")
+            w2[c] = pd.to_numeric(w2[c], errors="coerce")
+
         w1["Mix Shift Impact"] = ((w1["TCR%"] / 100) * w2["Sum of SurveyCount2"]).round(2)
         w1["Score Impact"] = ((w1["Sum of SurveyCount2"] / 100) * w2["TCR%"]).round(2)
 
@@ -251,4 +257,5 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
