@@ -72,14 +72,16 @@ if uploaded_file:
             except Exception:
                 idx = 0
 
-            selected_val = st.sidebar.selectbox(
-                f"{dim} Filter",
-                ["All"] + possible_vals,
-                index=idx,
-                key=f"select_{dim}"
+            # multi-select now instead of single selectbox
+            selected_vals = st.sidebar.multiselect(
+                f"{dim} Filter (multi-select)",
+                options=possible_vals,
+                default=[] if st.session_state.active_filters[dim] is None else st.session_state.active_filters[dim],
+                key=f"multi_{dim}"
             )
 
-            st.session_state.active_filters[dim] = None if selected_val == "All" else selected_val
+            st.session_state.active_filters[dim] = None if not selected_vals else selected_vals
+
 
             # Reset / Remove buttons (unchanged UI)
             reset_col, remove_col = st.sidebar.columns(2)
