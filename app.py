@@ -98,7 +98,9 @@ if uploaded_file:
     filtered_df = df.copy()
     for dim, val in st.session_state.active_filters.items():
         if val is not None:
-            filtered_df = filtered_df[filtered_df[dim].astype(str) == str(val)]
+            # Convert both sides to string for consistent comparison
+            filtered_df = filtered_df[filtered_df[dim].astype(str).isin([str(v) for v in val])]
+
 
     st.markdown("### 📊 Filtered Dataset Preview")
     st.dataframe(filtered_df.head(10))
