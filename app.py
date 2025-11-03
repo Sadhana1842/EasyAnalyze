@@ -52,8 +52,6 @@ if uploaded_file:
             # Build mask by applying all other active filters (string comparison to avoid dtype issues)
             mask = pd.Series(True, index=df.index)
             for other_dim, other_val in st.session_state.active_filters.items():
-                if other_dim == dim:
-                    continue
                 if other_val is not None:
                     if isinstance(other_val, list):
                         mask &= df[other_dim].astype(str).isin([str(v) for v in other_val])
