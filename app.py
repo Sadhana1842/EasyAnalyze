@@ -42,7 +42,7 @@ if uploaded_file:
                 st.session_state.active_filters[col] = None
                 st.rerun()
 
-    # ✅ Updated dependent multi-filter logic
+    # ✅ Reverted to single-select filter logic
     if st.session_state.active_filters:
         st.sidebar.markdown("### Active Filters")
 
@@ -51,10 +51,7 @@ if uploaded_file:
             mask = pd.Series(True, index=df.index)
             for other_dim, other_val in st.session_state.active_filters.items():
                 if other_val is not None:
-                    if isinstance(other_val, list):
-                        mask &= df[other_dim].astype(str).isin([str(v) for v in other_val])
-                    else:
-                        mask &= df[other_dim].astype(str).eq(str(other_val))
+                    mask &= df[other_dim].astype(str).eq(str(other_val))
 
             temp_df = df.loc[mask]
 
@@ -62,17 +59,16 @@ if uploaded_file:
             possible_vals_raw = temp_df[dim].dropna().unique().tolist()
             possible_vals = sorted([str(x) for x in possible_vals_raw], key=lambda x: x.lower())
 
-            # ✅ Use list default instead of string conversion
-            current_vals = [] if st.session_state.active_filters[dim] is None else st.session_state.active_filters[dim]
+            current_val = None if st.session_state.active_filters[dim] is None else str(st.session_state.active_filters[dim])
 
-            selected_vals = st.sidebar.multiselect(
-                f"{dim} Filter (multi-select)",
-                options=possible_vals,
-                default=current_vals,
-                key=f"multi_{dim}"
+            selected_val = st.sidebar.selectbox(
+                f"{dim} Filter",
+                options=["All"] + possible_vals,
+                index=possible_vals.index(current_val) + 1 if current_val in possible_vals else 0,
+                key=f"select_{dim}"
             )
 
-            st.session_state.active_filters[dim] = None if not selected_vals else selected_vals
+            st.session_state.active_filters[dim] = None if selected_val == "All" else selected_val
 
             reset_col, remove_col = st.sidebar.columns(2)
             if reset_col.button(f"🔁 Reset {dim}", key=f"reset_{dim}"):
@@ -87,7 +83,7 @@ if uploaded_file:
     filtered_df = df.copy()
     for dim, val in st.session_state.active_filters.items():
         if val is not None:
-            filtered_df = filtered_df[filtered_df[dim].astype(str).isin([str(v) for v in val])]
+            filtered_df = filtered_df[filtered_df[dim].astype(str).eq(str(val))]
 
     st.markdown("### 📊 Filtered Dataset Preview")
     st.dataframe(filtered_df.head(10))
@@ -139,10 +135,7 @@ if uploaded_file:
 
     try:
         active_keys = list(st.session_state.active_filters.keys())
-        if active_keys:
-            group_cols = active_keys
-        else:
-            group_cols = []
+        group_cols = active_keys if active_keys else []
 
         stats1 = calc_group_stats(filtered_df, date_range1[0], date_range1[1], group_cols)
         stats2 = calc_group_stats(filtered_df, date_range2[0], date_range2[1], group_cols)
