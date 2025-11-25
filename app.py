@@ -167,10 +167,25 @@ if uploaded_file:
     tab1, tab2, tab3 = st.tabs(["Comparison Table", "Over all Impact Analysis", "Score and Mix Shift Impact Analysis"])
     with tab1:
         try:
+            # --- MERGED OUTPUT (R1 | R2) ---
+            # Ensure aligned shape
+            df1_filtered = stats1.reindex_like(stats2).fillna(0)
+            df2_filtered = stats2.reindex_like(stats1).fillna(0)
+            
+            # Create merged display dataframe
+            merged_df = pd.DataFrame(index=df1_filtered.index)
+            
+            for col in df1_filtered.columns:
+                merged_df[col] = df1_filtered[col].astype(str) + " | " + df2_filtered[col].astype(str)
+            
+            st.write("### Comparison (R1 | R2)")
+            st.dataframe(merged_df, use_container_width=True)
+            
+            # Keep grand total same format
+            st.write("### Grand Total Summary")
+            st.dataframe(grand_total_df, use_container_width=True)
             col1, col2 = st.columns(2, border=True)
             with col1:
-                st.subheader("Metrics - Date Range 1")
-                st.dataframe(stats1.iloc[:-1])
                 grand_total_1 = stats1.iloc[-1:]
                 st.markdown(
                     f"<div style='background-color:grey; padding:7px; font-weight:bold;'>"
@@ -182,8 +197,6 @@ if uploaded_file:
                 )
 
             with col2:
-                st.subheader("Metrics - Date Range 2")
-                st.dataframe(stats2.iloc[:-1])
                 grand_total_2 = stats2.iloc[-1:]
                 st.markdown(
                     f"<div style='background-color:grey; padding:10px; font-weight:bold;'>"
@@ -260,3 +273,4 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
