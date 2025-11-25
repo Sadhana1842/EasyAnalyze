@@ -196,7 +196,7 @@ if uploaded_file:
                 )
 
             with col2:
-                grand_total_2 = sdf2_filtered.iloc[-1:]
+                grand_total_2 = df2_filtered.iloc[-1:]
                 st.markdown(
                     f"<div style='background-color:grey; padding:10px; font-weight:bold;'>"
                     f"Grand Total:<br>"
@@ -272,6 +272,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
