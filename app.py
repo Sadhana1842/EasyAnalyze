@@ -12,7 +12,7 @@ if uploaded_file:
     df.columns = df.columns.str.strip()
 
     # Ensure recordeddate is datetime
-    if not pd.api.types.is_datetime64_any_dtype(df["recordeddate"]):
+    if "recordeddate" in df.columns and not pd.api.types.is_datetime64_any_dtype(df["recordeddate"]):
         df["recordeddate"] = pd.to_datetime(df["recordeddate"], errors="coerce")
 
     min_date = df["recordeddate"].min()
@@ -139,7 +139,8 @@ if uploaded_file:
 
         total_row = pd.Series(
             {
-                group_cols[0]: "Grand Total",
+                # keep using the first group column name for the total label
+                (group_cols[0] if group_cols else "Overall"): "Grand Total",
                 "Sum of SurveyCount": grouped["Sum of SurveyCount"].sum(),
                 "Sum of SurveyCount2": grouped["Sum of SurveyCount2"].sum(),
                 "TCR%": (grouped["Sum of TCR_Yes"].sum() / grouped["Sum of SurveyCount"].sum()) if grouped["Sum of SurveyCount"].sum() else 0.0,
@@ -147,7 +148,9 @@ if uploaded_file:
             }
         )
 
-        grouped = grouped[group_cols + ["Sum of SurveyCount", "Sum of SurveyCount2", "TCR%", "CSAT%", "Weightage (Sumproduct)"]]
+        # ensure the group columns exist even if empty
+        base_cols = group_cols if group_cols else []
+        grouped = grouped[base_cols + ["Sum of SurveyCount", "Sum of SurveyCount2", "TCR%", "CSAT%", "Weightage (Sumproduct)"]]
         grouped = pd.concat([grouped, total_row.to_frame().T], ignore_index=True)
         return grouped
 
@@ -167,47 +170,99 @@ if uploaded_file:
     tab1, tab2, tab3 = st.tabs(["Comparison Table", "Over all Impact Analysis", "Score and Mix Shift Impact Analysis"])
     with tab1:
         try:
-            # --- BUILD MERGED MULTIINDEX DATAFRAME BASED ON SELECTED FILTER ---
-            filter_col = selected_filter  # Example: "template", "TemplateCategory", etc.
-            
-            # R1 and R2 final grouped results (already calculated)
-            df_R1 = result1.reset_index()
-            df_R2 = result2.reset_index()
-            
-            # Rename columns to prepare for merge
-            df_R1 = df_R1.add_suffix(" R1")
-            df_R2 = df_R2.add_suffix(" R2")
-            
-            # Rename merge key back to normal for join
-            df_R1 = df_R1.rename(columns={f"{filter_col} R1": filter_col})
-            df_R2 = df_R2.rename(columns={f"{filter_col} R2": filter_col})
-            
-            # Merge based on actual filter value (IMPORTANT)
-            merged = pd.merge(df_R1, df_R2, on=filter_col, how="outer")
-            
-            # Build MultiIndex columns → Main col + (R1/R2)
-            new_cols = []
-            for col in merged.columns:
-                if col == filter_col:
-                    new_cols.append((col, ""))   # filter column has no R1/R2
-                elif col.endswith(" R1"):
-                    new_cols.append((col.replace(" R1", ""), "R1"))
-                elif col.endswith(" R2"):
-                    new_cols.append((col.replace(" R2", ""), "R2"))
+            # -----------------------------
+            # Build merged MultiIndex DataFrame
+            # -----------------------------
+            # Use the grouping key (first active filter) if present, otherwise show overall single-row comparison
+            merge_key = group_cols[0] if group_cols else None
+
+            # Take the grouped rows excluding the grand total row
+            df1_core = stats1.iloc[:-1].copy() if len(stats1) > 0 else stats1.copy()
+            df2_core = stats2.iloc[:-1].copy() if len(stats2) > 0 else stats2.copy()
+
+            if merge_key:
+                # Ensure the merge_key exists in grouped dfs
+                if merge_key not in df1_core.columns:
+                    # Defensive: if group_cols present but column missing (shouldn't happen), fallback to index alignment
+                    df1_core = df1_core.reset_index()
+                if merge_key not in df2_core.columns:
+                    df2_core = df2_core.reset_index()
+
+                # Reset index so merge works on column values
+                left = df1_core.reset_index(drop=True)
+                right = df2_core.reset_index(drop=True)
+
+                # Merge on the selected grouping key (outer to preserve groups present in either period)
+                merged_on_key = pd.merge(left, right, on=merge_key, how="outer", suffixes=("_R1", "_R2"))
+            else:
+                # No grouping: create a single-row merged table using the grand totals (we won't include the grand total row below)
+                g1 = stats1.iloc[-1:].copy().reset_index(drop=True)
+                g2 = stats2.iloc[-1:].copy().reset_index(drop=True)
+
+                # build a one-row DataFrame where each metric has _R1 and _R2 columns
+                merged_on_key = pd.DataFrame()
+                for col in g1.columns:
+                    merged_on_key[col + "_R1"] = g1[col].values
+                    merged_on_key[col + "_R2"] = g2[col].values
+                # keep a label column
+                merged_on_key.index = ["Overall"]
+
+            # Build MultiIndex columns: for metric columns create (metric, 'R1') and (metric, 'R2')
+            new_tuples = []
+            ordered_cols = []
+
+            for col in merged_on_key.columns:
+                if merge_key and col == merge_key:
+                    # keep the key column as a single-level column (no R1/R2)
+                    new_tuples.append((col, ""))
+                    ordered_cols.append(col)
+                elif col.endswith("_R1"):
+                    base = col[:-3]  # remove suffix
+                    new_tuples.append((base, "R1"))
+                    ordered_cols.append(col)
+                elif col.endswith("_R2"):
+                    base = col[:-3]
+                    new_tuples.append((base, "R2"))
+                    ordered_cols.append(col)
                 else:
-                    new_cols.append((col, ""))
-            
-            merged.columns = pd.MultiIndex.from_tuples(new_cols)
-            
-            # Show merged dataframe
-            st.dataframe(merged)
+                    # If for some reason a column doesn't follow suffix pattern, try to infer pairs:
+                    new_tuples.append((col, "R1"))
+                    ordered_cols.append(col)
+
+            # reindex merged_on_key to ordered_cols to preserve order
+            merged_ordered = merged_on_key[ordered_cols].copy()
+
+            # construct final dataframe with MultiIndex columns
+            final_cols = pd.MultiIndex.from_tuples(new_tuples)
+            final_df = pd.DataFrame(merged_ordered.values, columns=final_cols, index=merged_ordered.index)
+
+            # If merge_key exists, put it back as the leftmost regular column (not part of MultiIndex)
+            if merge_key:
+                # extract the key column and insert as a normal column
+                key_col = final_df[(merge_key, "")]
+                # drop the multiindex key column
+                final_df = final_df.drop(columns=[(merge_key, "")])
+                # reset columns to ensure consistent order, then add key column at front
+                final_df.insert(0, merge_key, key_col.values)
+
+            # Reset index when group_cols exist so the dataframe shows the grouping column(s) as normal columns
+            if merge_key:
+                # if the merged result has the key as a column it is already visible; no reset required
+                pass
+            else:
+                # For overall single-row, reset index to show 'Overall' label if desired
+                final_df = final_df.reset_index().rename(columns={"index": merge_key if merge_key else "Overall"})
+
+            # Display the MultiIndex dataframe
+            st.write("### Comparison — Combined DataFrame (Metric → R1 / R2)")
+            st.dataframe(final_df, use_container_width=True)
 
             # ---- Grand Total Block (UNCHANGED) ----
             st.write("### Grand Total Summary")
             col1, col2 = st.columns(2, border=True)
-            
+
             with col1:
-                grand_total_1 = df1.iloc[-1:]
+                grand_total_1 = stats1.iloc[-1:]
                 st.markdown(
                     f"<div style='background-color:grey; padding:7px; font-weight:bold;'>"
                     f"Grand Total:<br>"
@@ -216,9 +271,9 @@ if uploaded_file:
                     f"CSAT%: {grand_total_1['CSAT%'].values[0]:.2%}</div>",
                     unsafe_allow_html=True,
                 )
-            
+
             with col2:
-                grand_total_2 = df2.iloc[-1:]
+                grand_total_2 = stats2.iloc[-1:]
                 st.markdown(
                     f"<div style='background-color:grey; padding:10px; font-weight:bold;'>"
                     f"Grand Total:<br>"
@@ -227,8 +282,9 @@ if uploaded_file:
                     f"CSAT%: {grand_total_2['CSAT%'].values[0]:.2%}</div>",
                     unsafe_allow_html=True,
                 )
-        except Exception:
-            st.error("Can't find dataset. Please upload file!")
+        except Exception as exc:
+            # Show the exception for debugging (more helpful than a generic message)
+            st.error(f"Can't render comparison table: {exc}")
 
     with tab2:
         st.subheader("Impact %")
@@ -294,11 +350,3 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
-
-
-
-
-
-
-
-
