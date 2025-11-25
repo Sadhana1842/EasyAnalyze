@@ -201,7 +201,6 @@ if uploaded_file:
                 merged_by_key.index = ["Overall"]
 
             # Build list of metrics (base names) in the desired column order.
-            # For rows merged_by_key, columns will be either: merge_key, <metric>_R1, <metric>_R2
             base_metrics = []
             for c in merged_by_key.columns:
                 if merge_key and c == merge_key:
@@ -212,74 +211,48 @@ if uploaded_file:
             seen = set()
             base_metrics = [x for x in base_metrics if not (x in seen or seen.add(x))]
 
-            # Build final DataFrame where for each base metric we create two subcolumns (R1, R2)
-            final_cols = []
-            final_values = {}
+            # Now build final data and columns
+            multi_tuples = []
+            data_rows = []
 
-            # If merge_key exists, include it as the leftmost normal column
+            # If merge_key exists, collect the key column values
             if merge_key:
-                final_cols.append(merge_key)
-                final_values[merge_key] = merged_by_key[merge_key].values
+                key_values = merged_by_key[merge_key].values
+            else:
+                key_values = None
 
+            # Build a dictionary where keys are tuple column names and values are arrays
+            col_data = {}
             for metric in base_metrics:
-                col_r1 = metric + "_R1" if (metric + "_R1") in merged_by_key.columns else None
-                col_r2 = metric + "_R2" if (metric + "_R2") in merged_by_key.columns else None
-
-                # prepare values, if missing fill with NaN
+                col_r1 = metric + "_R1"
+                col_r2 = metric + "_R2"
                 vals_r1 = merged_by_key[col_r1].values if col_r1 in merged_by_key.columns else [pd.NA] * len(merged_by_key)
                 vals_r2 = merged_by_key[col_r2].values if col_r2 in merged_by_key.columns else [pd.NA] * len(merged_by_key)
 
-                final_cols.append((metric, "R1"))
-                final_cols.append((metric, "R2"))
-                final_values[(metric, "R1")] = vals_r1
-                final_values[(metric, "R2")] = vals_r2
+                col_data[(metric, "R1")] = vals_r1
+                col_data[(metric, "R2")] = vals_r2
+                multi_tuples.append((metric, "R1"))
+                multi_tuples.append((metric, "R2"))
 
-            # Construct DataFrame from final_values. If merge_key exists, build mixed columns.
+            # Construct final_df
             if merge_key:
-                # build DataFrame first with the key
-                output_df = pd.DataFrame({merge_key: final_values[merge_key]})
-                # then add MultiIndex columns for metrics
-                tuples = []
-                data_cols = []
-                for (metric, sub) in final_values:
-                    if isinstance((metric, sub), tuple):
-                        pass  # handled differently below
-                # iterate metrics in order and assign columns
-                for metric in base_metrics:
-                    output_df[(metric, "R1")] = final_values[(metric, "R1")]
-                    output_df[(metric, "R2")] = final_values[(metric, "R2")]
-                # set MultiIndex on metric columns (except the first key column)
-                # move key column to position 0 and keep it single-level
-                # separate key col from multiindex columns
-                metric_cols = [c for c in output_df.columns if isinstance(c, tuple)]
-                # create MultiIndex for only tuple columns
-                if metric_cols:
-                    # build MultiIndex
-                    mi = pd.MultiIndex.from_tuples(metric_cols)
-                    # create final_df by keeping key as normal col and others as multiindex
-                    normal = output_df[[merge_key]].copy()
-                    multi_df = pd.DataFrame(output_df[metric_cols].values, columns=mi, index=output_df.index)
-                    final_df = pd.concat([normal, multi_df], axis=1)
+                # Create DataFrame with key column first, then multiindex columns
+                normal_df = pd.DataFrame({merge_key: key_values})
+                if col_data:
+                    multi_df = pd.DataFrame(col_data, index=merged_by_key.index)
+                    # ensure columns are MultiIndex
+                    multi_df.columns = pd.MultiIndex.from_tuples(list(multi_df.columns))
+                    final_df = pd.concat([normal_df.reset_index(drop=True), multi_df.reset_index(drop=True)], axis=1)
                 else:
-                    final_df = output_df.copy()
+                    final_df = normal_df
             else:
-                # no merge key: columns are only MultiIndex pairs
-                mi_tuples = []
-                data = {}
-                for metric in base_metrics:
-                    mi_tuples.append((metric, "R1"))
-                    mi_tuples.append((metric, "R2"))
-                    data[(metric, "R1")] = final_values[(metric, "R1")]
-                    data[(metric, "R2")] = final_values[(metric, "R2")]
-                if data:
-                    # DataFrame from dict with MultiIndex columns
-                    # pandas accepts dict with tuple keys and will create MultiIndex columns
-                    final_df = pd.DataFrame(data, index=merged_by_key.index)
+                # No merge key: only multiindex columns (overall single row)
+                if col_data:
+                    final_df = pd.DataFrame(col_data, index=merged_by_key.index)
                     final_df.columns = pd.MultiIndex.from_tuples(list(final_df.columns))
                 else:
                     final_df = pd.DataFrame(index=merged_by_key.index)
 
-            # If you prefer the grouping column visible as regular column and not multiindex - already handled above.
             # Display the MultiIndex dataframe
             st.write("### Comparison — Combined DataFrame (Metric → R1 / R2)")
             st.dataframe(final_df, use_container_width=True)
@@ -309,9 +282,7 @@ if uploaded_file:
                     f"CSAT%: {grand_total_2['CSAT%'].values[0]:.2%}</div>",
                     unsafe_allow_html=True,
                 )
-
         except Exception as exc:
-            # Show the exception for debugging (more helpful than a generic message)
             st.error(f"Can't render comparison table: {exc}")
 
     with tab2:
