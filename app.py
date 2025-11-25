@@ -167,25 +167,34 @@ if uploaded_file:
     tab1, tab2, tab3 = st.tabs(["Comparison Table", "Over all Impact Analysis", "Score and Mix Shift Impact Analysis"])
     with tab1:
         try:
-            # --- MERGED OUTPUT (R1 | R2) ---
-            # Ensure aligned shape
-            df1_filtered = stats1.reindex_like(stats2).fillna(0)
-            df2_filtered = stats2.reindex_like(stats1).fillna(0)
+            # --- MERGED OUTPUT (Nested MultiIndex Columns) ---
+            # Both stats already aligned because they have the same structure
+            df1 = stats1.copy()
+            df2 = stats2.copy()
             
-            # Create merged display dataframe
-            merged_df = pd.DataFrame(index=df1_filtered.index)
+            # Create MultiIndex columns like:
+            # Metric → (R1, R2)
+            merged_cols = pd.MultiIndex.from_product(
+                [df1.columns, ["R1", "R2"]],
+                names=["Metric", "Range"]
+            )
             
-            for col in df1_filtered.columns:
-                merged_df[col] = df1_filtered[col].astype(str) + " | " + df2_filtered[col].astype(str)
+            merged_df = pd.DataFrame(index=df1.index, columns=merged_cols)
             
-            st.write("### Comparison (R1 | R2)")
+            # Fill values properly
+            for col in df1.columns:
+                merged_df[(col, "R1")] = df1[col]
+                merged_df[(col, "R2")] = df2[col]
+            
+            st.write("### Comparison (R1 vs R2)")
             st.dataframe(merged_df, use_container_width=True)
             
-            # Keep grand total same format
+            # ---- Grand Total Block (UNCHANGED) ----
             st.write("### Grand Total Summary")
             col1, col2 = st.columns(2, border=True)
+            
             with col1:
-                grand_total_1 = df1_filtered.iloc[-1:]
+                grand_total_1 = df1.iloc[-1:]
                 st.markdown(
                     f"<div style='background-color:grey; padding:7px; font-weight:bold;'>"
                     f"Grand Total:<br>"
@@ -194,9 +203,9 @@ if uploaded_file:
                     f"CSAT%: {grand_total_1['CSAT%'].values[0]:.2%}</div>",
                     unsafe_allow_html=True,
                 )
-
+            
             with col2:
-                grand_total_2 = df2_filtered.iloc[-1:]
+                grand_total_2 = df2.iloc[-1:]
                 st.markdown(
                     f"<div style='background-color:grey; padding:10px; font-weight:bold;'>"
                     f"Grand Total:<br>"
@@ -205,6 +214,8 @@ if uploaded_file:
                     f"CSAT%: {grand_total_2['CSAT%'].values[0]:.2%}</div>",
                     unsafe_allow_html=True,
                 )
+            e_allow_html=True,
+                            )
         except Exception:
             st.error("Can't find dataset. Please upload file!")
 
@@ -272,6 +283,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
