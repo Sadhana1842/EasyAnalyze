@@ -183,7 +183,6 @@ if uploaded_file:
             
             # Keep grand total same format
             st.write("### Grand Total Summary")
-            st.dataframe(grand_total_df, use_container_width=True)
             col1, col2 = st.columns(2, border=True)
             with col1:
                 grand_total_1 = df1_filtered.iloc[-1:]
@@ -273,5 +272,6 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
