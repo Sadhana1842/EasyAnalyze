@@ -171,88 +171,115 @@ if uploaded_file:
     with tab1:
         try:
             # -----------------------------
-            # Build merged MultiIndex DataFrame
+            # Build merged MultiIndex DataFrame (PER-COLUMN PAIRING: metric -> R1, R2)
             # -----------------------------
-            # Use the grouping key (first active filter) if present, otherwise show overall single-row comparison
             merge_key = group_cols[0] if group_cols else None
 
-            # Take the grouped rows excluding the grand total row
+            # exclude grand total row for the core merge
             df1_core = stats1.iloc[:-1].copy() if len(stats1) > 0 else stats1.copy()
             df2_core = stats2.iloc[:-1].copy() if len(stats2) > 0 else stats2.copy()
 
+            # If there's a merge key, merge on its values so rows align by that value.
             if merge_key:
-                # Ensure the merge_key exists in grouped dfs
+                # Defensive: ensure key exists as column
                 if merge_key not in df1_core.columns:
-                    # Defensive: if group_cols present but column missing (shouldn't happen), fallback to index alignment
                     df1_core = df1_core.reset_index()
                 if merge_key not in df2_core.columns:
                     df2_core = df2_core.reset_index()
 
-                # Reset index so merge works on column values
-                left = df1_core.reset_index(drop=True)
-                right = df2_core.reset_index(drop=True)
-
-                # Merge on the selected grouping key (outer to preserve groups present in either period)
-                merged_on_key = pd.merge(left, right, on=merge_key, how="outer", suffixes=("_R1", "_R2"))
+                # Merge on the grouping key; preserve all groups with outer join
+                merged_by_key = pd.merge(df1_core, df2_core, on=merge_key, how="outer", suffixes=("_R1", "_R2"))
             else:
-                # No grouping: create a single-row merged table using the grand totals (we won't include the grand total row below)
+                # No grouping: we will create a single-row merged_on_key from grand totals
                 g1 = stats1.iloc[-1:].copy().reset_index(drop=True)
                 g2 = stats2.iloc[-1:].copy().reset_index(drop=True)
-
-                # build a one-row DataFrame where each metric has _R1 and _R2 columns
-                merged_on_key = pd.DataFrame()
+                # create merged_by_key with columns like Col_R1 and Col_R2
+                merged_by_key = pd.DataFrame()
                 for col in g1.columns:
-                    merged_on_key[col + "_R1"] = g1[col].values
-                    merged_on_key[col + "_R2"] = g2[col].values
-                # keep a label column
-                merged_on_key.index = ["Overall"]
+                    merged_by_key[col + "_R1"] = g1[col].values
+                    merged_by_key[col + "_R2"] = g2[col].values
+                merged_by_key.index = ["Overall"]
 
-            # Build MultiIndex columns: for metric columns create (metric, 'R1') and (metric, 'R2')
-            new_tuples = []
-            ordered_cols = []
+            # Build list of metrics (base names) in the desired column order.
+            # For rows merged_by_key, columns will be either: merge_key, <metric>_R1, <metric>_R2
+            base_metrics = []
+            for c in merged_by_key.columns:
+                if merge_key and c == merge_key:
+                    continue
+                if c.endswith("_R1"):
+                    base_metrics.append(c[:-3])
+            # ensure uniqueness & preserve order
+            seen = set()
+            base_metrics = [x for x in base_metrics if not (x in seen or seen.add(x))]
 
-            for col in merged_on_key.columns:
-                if merge_key and col == merge_key:
-                    # keep the key column as a single-level column (no R1/R2)
-                    new_tuples.append((col, ""))
-                    ordered_cols.append(col)
-                elif col.endswith("_R1"):
-                    base = col[:-3]  # remove suffix
-                    new_tuples.append((base, "R1"))
-                    ordered_cols.append(col)
-                elif col.endswith("_R2"):
-                    base = col[:-3]
-                    new_tuples.append((base, "R2"))
-                    ordered_cols.append(col)
+            # Build final DataFrame where for each base metric we create two subcolumns (R1, R2)
+            final_cols = []
+            final_values = {}
+
+            # If merge_key exists, include it as the leftmost normal column
+            if merge_key:
+                final_cols.append(merge_key)
+                final_values[merge_key] = merged_by_key[merge_key].values
+
+            for metric in base_metrics:
+                col_r1 = metric + "_R1" if (metric + "_R1") in merged_by_key.columns else None
+                col_r2 = metric + "_R2" if (metric + "_R2") in merged_by_key.columns else None
+
+                # prepare values, if missing fill with NaN
+                vals_r1 = merged_by_key[col_r1].values if col_r1 in merged_by_key.columns else [pd.NA] * len(merged_by_key)
+                vals_r2 = merged_by_key[col_r2].values if col_r2 in merged_by_key.columns else [pd.NA] * len(merged_by_key)
+
+                final_cols.append((metric, "R1"))
+                final_cols.append((metric, "R2"))
+                final_values[(metric, "R1")] = vals_r1
+                final_values[(metric, "R2")] = vals_r2
+
+            # Construct DataFrame from final_values. If merge_key exists, build mixed columns.
+            if merge_key:
+                # build DataFrame first with the key
+                output_df = pd.DataFrame({merge_key: final_values[merge_key]})
+                # then add MultiIndex columns for metrics
+                tuples = []
+                data_cols = []
+                for (metric, sub) in final_values:
+                    if isinstance((metric, sub), tuple):
+                        pass  # handled differently below
+                # iterate metrics in order and assign columns
+                for metric in base_metrics:
+                    output_df[(metric, "R1")] = final_values[(metric, "R1")]
+                    output_df[(metric, "R2")] = final_values[(metric, "R2")]
+                # set MultiIndex on metric columns (except the first key column)
+                # move key column to position 0 and keep it single-level
+                # separate key col from multiindex columns
+                metric_cols = [c for c in output_df.columns if isinstance(c, tuple)]
+                # create MultiIndex for only tuple columns
+                if metric_cols:
+                    # build MultiIndex
+                    mi = pd.MultiIndex.from_tuples(metric_cols)
+                    # create final_df by keeping key as normal col and others as multiindex
+                    normal = output_df[[merge_key]].copy()
+                    multi_df = pd.DataFrame(output_df[metric_cols].values, columns=mi, index=output_df.index)
+                    final_df = pd.concat([normal, multi_df], axis=1)
                 else:
-                    # If for some reason a column doesn't follow suffix pattern, try to infer pairs:
-                    new_tuples.append((col, "R1"))
-                    ordered_cols.append(col)
-
-            # reindex merged_on_key to ordered_cols to preserve order
-            merged_ordered = merged_on_key[ordered_cols].copy()
-
-            # construct final dataframe with MultiIndex columns
-            final_cols = pd.MultiIndex.from_tuples(new_tuples)
-            final_df = pd.DataFrame(merged_ordered.values, columns=final_cols, index=merged_ordered.index)
-
-            # If merge_key exists, put it back as the leftmost regular column (not part of MultiIndex)
-            if merge_key:
-                # extract the key column and insert as a normal column
-                key_col = final_df[(merge_key, "")]
-                # drop the multiindex key column
-                final_df = final_df.drop(columns=[(merge_key, "")])
-                # reset columns to ensure consistent order, then add key column at front
-                final_df.insert(0, merge_key, key_col.values)
-
-            # Reset index when group_cols exist so the dataframe shows the grouping column(s) as normal columns
-            if merge_key:
-                # if the merged result has the key as a column it is already visible; no reset required
-                pass
+                    final_df = output_df.copy()
             else:
-                # For overall single-row, reset index to show 'Overall' label if desired
-                final_df = final_df.reset_index().rename(columns={"index": merge_key if merge_key else "Overall"})
+                # no merge key: columns are only MultiIndex pairs
+                mi_tuples = []
+                data = {}
+                for metric in base_metrics:
+                    mi_tuples.append((metric, "R1"))
+                    mi_tuples.append((metric, "R2"))
+                    data[(metric, "R1")] = final_values[(metric, "R1")]
+                    data[(metric, "R2")] = final_values[(metric, "R2")]
+                if data:
+                    # DataFrame from dict with MultiIndex columns
+                    # pandas accepts dict with tuple keys and will create MultiIndex columns
+                    final_df = pd.DataFrame(data, index=merged_by_key.index)
+                    final_df.columns = pd.MultiIndex.from_tuples(list(final_df.columns))
+                else:
+                    final_df = pd.DataFrame(index=merged_by_key.index)
 
+            # If you prefer the grouping column visible as regular column and not multiindex - already handled above.
             # Display the MultiIndex dataframe
             st.write("### Comparison — Combined DataFrame (Metric → R1 / R2)")
             st.dataframe(final_df, use_container_width=True)
@@ -282,6 +309,7 @@ if uploaded_file:
                     f"CSAT%: {grand_total_2['CSAT%'].values[0]:.2%}</div>",
                     unsafe_allow_html=True,
                 )
+
         except Exception as exc:
             # Show the exception for debugging (more helpful than a generic message)
             st.error(f"Can't render comparison table: {exc}")
