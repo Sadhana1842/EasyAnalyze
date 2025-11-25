@@ -214,8 +214,6 @@ if uploaded_file:
                     f"CSAT%: {grand_total_2['CSAT%'].values[0]:.2%}</div>",
                     unsafe_allow_html=True,
                 )
-            e_allow_html=True,
-                            )
         except Exception:
             st.error("Can't find dataset. Please upload file!")
 
@@ -283,6 +281,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
