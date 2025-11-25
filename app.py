@@ -186,7 +186,7 @@ if uploaded_file:
             st.dataframe(grand_total_df, use_container_width=True)
             col1, col2 = st.columns(2, border=True)
             with col1:
-                grand_total_1 = stats1.iloc[-1:]
+                grand_total_1 = df1_filtered.iloc[-1:]
                 st.markdown(
                     f"<div style='background-color:grey; padding:7px; font-weight:bold;'>"
                     f"Grand Total:<br>"
@@ -197,7 +197,7 @@ if uploaded_file:
                 )
 
             with col2:
-                grand_total_2 = stats2.iloc[-1:]
+                grand_total_2 = sdf2_filtered.iloc[-1:]
                 st.markdown(
                     f"<div style='background-color:grey; padding:10px; font-weight:bold;'>"
                     f"Grand Total:<br>"
@@ -273,4 +273,5 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
