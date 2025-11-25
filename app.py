@@ -167,25 +167,37 @@ if uploaded_file:
     tab1, tab2, tab3 = st.tabs(["Comparison Table", "Over all Impact Analysis", "Score and Mix Shift Impact Analysis"])
     with tab1:
         try:
-            # --- MERGED OUTPUT (Nested MultiIndex Columns) ---
-            # Both stats already aligned because they have the same structure
-            df1 = stats1.copy()
-            df2 = stats2.copy()
+            # --- BUILD MERGED MULTIINDEX DATAFRAME BASED ON SELECTED FILTER ---
+            filter_col = selected_filter  # Example: "template", "TemplateCategory", etc.
             
-            # Create MultiIndex columns like:
-            # Metric → (R1, R2)
-            merged_cols = pd.MultiIndex.from_product(
-                [df1.columns, ["R1", "R2"]],
-                names=["Metric", "Range"]
-            )
+            # R1 and R2 final grouped results (already calculated)
+            df_R1 = result1.reset_index()
+            df_R2 = result2.reset_index()
             
-            merged_df = pd.DataFrame(index=df1.index, columns=merged_cols)
+            # Rename columns to prepare for merge
+            df_R1 = df_R1.add_suffix(" R1")
+            df_R2 = df_R2.add_suffix(" R2")
             
-            # Fill values properly
-            for col in df1.columns:
-                merged_df[(col, "R1")] = df1[col]
-                merged_df[(col, "R2")] = df2[col]
+            # Rename merge key back to normal for join
+            df_R1 = df_R1.rename(columns={f"{filter_col} R1": filter_col})
+            df_R2 = df_R2.rename(columns={f"{filter_col} R2": filter_col})
             
+            # Merge based on actual filter value (IMPORTANT)
+            merged = pd.merge(df_R1, df_R2, on=filter_col, how="outer")
+            
+            # Build MultiIndex columns → Main col + (R1/R2)
+            new_cols = []
+            for col in merged.columns:
+                if col == filter_col:
+                    new_cols.append((col, ""))   # filter column has no R1/R2
+                elif col.endswith(" R1"):
+                    new_cols.append((col.replace(" R1", ""), "R1"))
+                elif col.endswith(" R2"):
+                    new_cols.append((col.replace(" R2", ""), "R2"))
+                else:
+                    new_cols.append((col, ""))
+            
+            merged.columns = pd.MultiIndex.from_tuples(new_cols)
             st.write("### Comparison (R1 vs R2)")
             st.dataframe(merged_df, use_container_width=True)
             
@@ -281,6 +293,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
