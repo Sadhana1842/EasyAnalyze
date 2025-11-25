@@ -198,9 +198,10 @@ if uploaded_file:
                     new_cols.append((col, ""))
             
             merged.columns = pd.MultiIndex.from_tuples(new_cols)
-            st.write("### Comparison (R1 vs R2)")
-            st.dataframe(merged_df, use_container_width=True)
             
+            # Show merged dataframe
+            st.dataframe(merged)
+
             # ---- Grand Total Block (UNCHANGED) ----
             st.write("### Grand Total Summary")
             col1, col2 = st.columns(2, border=True)
@@ -293,6 +294,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
