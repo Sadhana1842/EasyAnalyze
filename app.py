@@ -145,17 +145,17 @@ if uploaded_file:
     tab1, tab2, tab3 = st.tabs(["Comparison Table", "Over all Impact Analysis", "Score and Mix Shift Impact Analysis"])
 
     # =====================================================================
-    #                     TAB-1 — FIXED (YOUR REQUIRED FORMAT)
+    #                     TAB-1 — FINAL WORKING VERSION
     # =====================================================================
     with tab1:
         try:
             base = group_cols.copy()
-
             metrics = ["Sum of SurveyCount", "Sum of SurveyCount2", "TCR%", "CSAT%", "Weightage (Sumproduct)"]
 
             df_R1 = stats1.copy()
             df_R2 = stats2.copy()
 
+            # merge groups
             if base:
                 merged = df_R1.merge(df_R2, on=base, how="outer", suffixes=("_R1", "_R2"))
             else:
@@ -163,18 +163,26 @@ if uploaded_file:
                 df_R2["dummy"] = 1
                 merged = df_R1.merge(df_R2, on="dummy", suffixes=("_R1", "_R2")).drop(columns=["dummy"])
 
-            # Build MultiIndex
-            new_cols = []
+            # --- Construct MultiIndex columns in EXACT order ---
+            multi_cols = []
 
-            for col in merged.columns:
-                if col in base:
-                    new_cols.append((col, ""))  # Main filter column has no R1/R2
-                else:
-                    orig = col.replace("_R1", "").replace("_R2", "")
-                    period = "R1" if col.endswith("_R1") else "R2"
-                    new_cols.append((orig, period))
+            # grouping columns first
+            for g in base:
+                multi_cols.append((g, ""))
 
-            merged.columns = pd.MultiIndex.from_tuples(new_cols)
+            # metrics → (metric, R1), (metric, R2)
+            for m in metrics:
+                multi_cols.append((m, "R1"))
+                multi_cols.append((m, "R2"))
+
+            # assign this multiindex
+            merged = merged.reindex(columns=[
+                *base,
+                *[f"{m}_R1" for m in metrics],
+                *[f"{m}_R2" for m in metrics],
+            ])
+
+            merged.columns = pd.MultiIndex.from_tuples(multi_cols)
 
             st.write("### Comparison (R1 vs R2)")
             st.dataframe(merged, use_container_width=True)
@@ -183,7 +191,7 @@ if uploaded_file:
             st.error(f"Can't render comparison table: {e}")
 
     # =====================================================================
-    # TABS 2 & 3 UNCHANGED — YOUR EXISTING LOGIC
+    # TABS 2 & 3 — unchanged
     # =====================================================================
 
     with tab2:
