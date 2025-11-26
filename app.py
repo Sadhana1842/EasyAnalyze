@@ -196,7 +196,7 @@ if uploaded_file:
                 st.markdown("### **Grand Total — R1**")
                 st.markdown(
                 f"""<div style='background-color:grey; padding:10px; font-weight:bold;'>
-                **Sum of SurveyCount:** {gt_r1['Sum of SurveyCount']:.2f}  
+                **Sum of SurveyCount:** {gt_r1['Sum of SurveyCount']}  
                 **TCR %:** {gt_r1['TCR%']:.2f}%  
                 **CSAT %:** {gt_r1['CSAT%']:.2f}%  
                 **Weightage:** {gt_r1['Weightage (Sumproduct)'] if 'Weightage (Sumproduct)' in gt_r1 else 'N/A'}  
@@ -283,6 +283,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
