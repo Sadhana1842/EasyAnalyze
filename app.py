@@ -194,7 +194,8 @@ if uploaded_file:
 
             with colR1:
                 st.markdown("### **Grand Total — R1**")
-                st.markdown(f"""
+                st.markdown(
+                f"""<div style='background-color:grey; padding:10px; font-weight:bold;'>
                 **Sum of SurveyCount:** {gt_r1['Sum of SurveyCount']:.2f}  
                 **TCR %:** {gt_r1['TCR%']:.2f}%  
                 **CSAT %:** {gt_r1['CSAT%']:.2f}%  
@@ -203,7 +204,8 @@ if uploaded_file:
         
             with colR2:
                 st.markdown("### **Grand Total — R2**")
-                st.markdown(f"""
+                st.markdown(
+                f"""<div style='background-color:grey; padding:10px; font-weight:bold;'>
                 **Sum of SurveyCount:** {gt_r2['Sum of SurveyCount']:.2f}  
                 **TCR %:** {gt_r2['TCR%']:.2f}%  
                 **CSAT %:** {gt_r2['CSAT%']:.2f}%  
@@ -281,5 +283,6 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
