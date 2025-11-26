@@ -186,6 +186,10 @@ if uploaded_file:
 
             st.write("### Comparison (R1 vs R2)")
             st.dataframe(merged, use_container_width=True)
+
+            
+            gt_r1 = stats1.iloc[-1]
+            gt_r2 = stats2.iloc[-1]
             colR1, colR2 = st.columns(2)
 
             with colR1:
@@ -277,4 +281,5 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
