@@ -152,8 +152,8 @@ if uploaded_file:
             base = group_cols.copy()
             metrics = ["Sum of SurveyCount", "Sum of SurveyCount2", "TCR%", "CSAT%", "Weightage (Sumproduct)"]
 
-            df_R1 = stats1.copy()
-            df_R2 = stats2.copy()
+            df_R1 = stats1[:-1].copy()
+            df_R2 = stats2[:-1].copy()
 
             # merge groups
             if base:
@@ -186,6 +186,25 @@ if uploaded_file:
 
             st.write("### Comparison (R1 vs R2)")
             st.dataframe(merged, use_container_width=True)
+            colR1, colR2 = st.columns(2)
+
+            with colR1:
+                st.markdown("### **Grand Total — R1**")
+                st.markdown(f"""
+                **Sum of SurveyCount:** {gt_r1['Sum of SurveyCount']:.2f}  
+                **TCR %:** {gt_r1['TCR%']:.2f}%  
+                **CSAT %:** {gt_r1['CSAT%']:.2f}%  
+                **Weightage:** {gt_r1['Weightage (Sumproduct)'] if 'Weightage (Sumproduct)' in gt_r1 else 'N/A'}  
+                """)
+        
+            with colR2:
+                st.markdown("### **Grand Total — R2**")
+                st.markdown(f"""
+                **Sum of SurveyCount:** {gt_r2['Sum of SurveyCount']:.2f}  
+                **TCR %:** {gt_r2['TCR%']:.2f}%  
+                **CSAT %:** {gt_r2['CSAT%']:.2f}%  
+                **Weightage:** {gt_r2['Weightage (Sumproduct)'] if 'Weightage (Sumproduct)' in gt_r2 else 'N/A'}  
+                """)
 
         except Exception as e:
             st.error(f"Can't render comparison table: {e}")
@@ -258,3 +277,4 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
