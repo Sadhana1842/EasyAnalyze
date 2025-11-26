@@ -195,22 +195,22 @@ if uploaded_file:
             with colR1:
                 st.markdown("### **Grand Total — R1**")
                 st.markdown(
-                f"""<div style='background-color:grey; padding:10px; font-weight:bold;'>
-                **Sum of SurveyCount:** {gt_r1['Sum of SurveyCount']}  
-                **TCR %:** {gt_r1['TCR%']:.2f}%  
-                **CSAT %:** {gt_r1['CSAT%']:.2f}%  
-                **Weightage:** {gt_r1['Weightage (Sumproduct)'] if 'Weightage (Sumproduct)' in gt_r1 else 'N/A'}  
-                """)
+                f"<div style='background-color:grey; padding:10px; font-weight:bold;'>"
+                f"**Sum of SurveyCount:** {gt_r1['Sum of SurveyCount']}<br>"
+                f"**TCR %:** {gt_r1['TCR%']:.2f}%<br>"
+                f"**CSAT %:** {gt_r1['CSAT%']:.2f}%<br>"
+                f"**Weightage:** {gt_r1['Weightage (Sumproduct)'] if 'Weightage (Sumproduct)' in gt_r1 else 'N/A'}<br></div>",
+                unsafe_allow_html = True)
         
             with colR2:
                 st.markdown("### **Grand Total — R2**")
                 st.markdown(
-                f"""<div style='background-color:grey; padding:10px; font-weight:bold;'>
-                **Sum of SurveyCount:** {gt_r2['Sum of SurveyCount']:.2f}  
-                **TCR %:** {gt_r2['TCR%']:.2f}%  
-                **CSAT %:** {gt_r2['CSAT%']:.2f}%  
-                **Weightage:** {gt_r2['Weightage (Sumproduct)'] if 'Weightage (Sumproduct)' in gt_r2 else 'N/A'}  
-                """)
+                f"<div style='background-color:grey; padding:10px; font-weight:bold;'>"
+                f"**Sum of SurveyCount:** {gt_r2['Sum of SurveyCount']:.2f}<br>"
+                f"**TCR %:** {gt_r2['TCR%']:.2f}%<br>"
+                f"**CSAT %:** {gt_r2['CSAT%']:.2f}%<br>"
+                f"**Weightage:** {gt_r2['Weightage (Sumproduct)'] if 'Weightage (Sumproduct)' in gt_r2 else 'N/A'}<br></div>",
+                unsafe_allow_html = True)
 
         except Exception as e:
             st.error(f"Can't render comparison table: {e}")
@@ -283,6 +283,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
