@@ -198,7 +198,7 @@ if uploaded_file:
                 st.markdown(
                     f"""
                     <div style='background-color:grey; padding:10px; font-weight:bold;'>
-                    <b>Sum of SurveyCount:</b> {gt_r1.get('Sum of SurveyCount', 'N/A')}<br>
+                    <b>Sum of SurveyCount:</b> {int(gt_r1.get('Sum of SurveyCount', 'N/A'))}<br>
                     <b>TCR %:</b> {gt_r1.get('TCR%', 0):.2f}%<br>
                     <b>CSAT %:</b> {gt_r1.get('CSAT%', 0):.2f}%<br>
                     <b>Weightage:</b> {gt_r1.get('Weightage (Sumproduct)', 'N/A')}<br>
@@ -213,7 +213,7 @@ if uploaded_file:
                 st.markdown(
                     f"""
                     <div style='background-color:grey; padding:10px; font-weight:bold;'>
-                    <b>Sum of SurveyCount:</b> {gt_r2.get('Sum of SurveyCount', 'N/A')}<br>
+                    <b>Sum of SurveyCount:</b> {int(gt_r2.get('Sum of SurveyCount', 'N/A'))}<br>
                     <b>TCR %:</b> {gt_r2.get('TCR%', 0):.2f}%<br>
                     <b>CSAT %:</b> {gt_r2.get('CSAT%', 0):.2f}%<br>
                     <b>Weightage:</b> {gt_r2.get('Weightage (Sumproduct)', 'N/A')}<br>
@@ -293,6 +293,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
