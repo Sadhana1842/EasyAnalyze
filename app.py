@@ -122,8 +122,7 @@ if uploaded_file:
                  "Sum of SurveyCount": grouped["Sum of SurveyCount"].sum(),
                  "Sum of SurveyCount2": grouped["Sum of SurveyCount2"].sum(),
                  "TCR%": grouped["Sum of TCR_Yes"].sum() * 100 / grouped["Sum of SurveyCount"].sum(),
-                 "CSAT%": grouped["Sum of CSAT_Num"].sum() * 100 / grouped["Sum of SurveyCount"].sum()
-            )
+                 "CSAT%": grouped["Sum of CSAT_Num"].sum() * 100 / grouped["Sum of SurveyCount"].sum()})
         else:
             total_row = None
 
@@ -290,6 +289,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
