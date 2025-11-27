@@ -122,8 +122,7 @@ if uploaded_file:
                  "Sum of SurveyCount": grouped["Sum of SurveyCount"].sum(),
                  "Sum of SurveyCount2": grouped["Sum of SurveyCount2"].sum(),
                  "TCR%": grouped["Sum of TCR_Yes"].sum() * 100 / grouped["Sum of SurveyCount"].sum(),
-                 "CSAT%": grouped["Sum of CSAT_Num"].sum() * 100 / grouped["Sum of SurveyCount"].sum(),
-                 "Weightage (Sumproduct)": None}
+                 "CSAT%": grouped["Sum of CSAT_Num"].sum() * 100 / grouped["Sum of SurveyCount"].sum()
             )
         else:
             total_row = None
@@ -201,7 +200,6 @@ if uploaded_file:
                     <b>Sum of SurveyCount:</b> {int(gt_r1.get('Sum of SurveyCount', 'N/A'))}<br>
                     <b>TCR %:</b> {gt_r1.get('TCR%', 0):.2f}%<br>
                     <b>CSAT %:</b> {gt_r1.get('CSAT%', 0):.2f}%<br>
-                    <b>Weightage:</b> {gt_r1.get('Weightage (Sumproduct)', 'N/A')}<br>
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -216,7 +214,6 @@ if uploaded_file:
                     <b>Sum of SurveyCount:</b> {int(gt_r2.get('Sum of SurveyCount', 'N/A'))}<br>
                     <b>TCR %:</b> {gt_r2.get('TCR%', 0):.2f}%<br>
                     <b>CSAT %:</b> {gt_r2.get('CSAT%', 0):.2f}%<br>
-                    <b>Weightage:</b> {gt_r2.get('Weightage (Sumproduct)', 'N/A')}<br>
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -293,6 +290,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
