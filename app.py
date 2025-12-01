@@ -62,27 +62,29 @@ if uploaded_file:
         st.sidebar.markdown("### Active Filters")
 
         for dim in list(st.session_state.active_filters.keys()):
+            # mask based on all other active filters
             mask = pd.Series(True, index=df.index)
             for other_dim, other_val in st.session_state.active_filters.items():
                 if other_val is not None:
-                    if isinstance(other_val, list):
-                        mask &= df[other_dim].astype(str).isin([str(v) for v in other_val])
-                    else:
-                        mask &= df[other_dim].astype(str).eq(str(other_val))
+                    mask &= df[other_dim].astype(str).eq(str(other_val))
 
             temp_df = df.loc[mask]
 
             possible_vals_raw = temp_df[dim].dropna().unique().tolist()
             possible_vals = sorted([str(x) for x in possible_vals_raw], key=lambda x: x.lower())
 
-            selected_vals = st.sidebar.multiselect(
-                f"{dim} Filter (multi-select)",
-                options=possible_vals,
-                default=[] if st.session_state.active_filters[dim] is None else st.session_state.active_filters[dim],
-                key=f"multi_{dim}",
+            current_val = st.session_state.active_filters[dim]
+            if current_val is not None and str(current_val) not in possible_vals:
+                current_val = None
+
+            selected_val = st.sidebar.selectbox(
+                f"{dim} Filter",
+                options=["(All)"] + possible_vals,
+                index=0 if current_val is None else (possible_vals.index(str(current_val)) + 1),
+                key=f"sel_{dim}",
             )
 
-            st.session_state.active_filters[dim] = None if not selected_vals else selected_vals
+            st.session_state.active_filters[dim] = None if selected_val == "(All)" else selected_val
 
             reset_col, remove_col = st.sidebar.columns(2)
             if reset_col.button(f"🔁 Reset {dim}", key=f"reset_{dim}"):
@@ -94,14 +96,11 @@ if uploaded_file:
     else:
         st.sidebar.info("No dimensions selected. Click a dimension above to add it as a filter.")
 
-    # Apply all active filters
+    # Apply all active filters (now single value per dim)
     filtered_df = df.copy()
     for dim, val in st.session_state.active_filters.items():
         if val is not None:
-            if isinstance(val, list):
-                filtered_df = filtered_df[filtered_df[dim].astype(str).isin([str(v) for v in val])]
-            else:
-                filtered_df = filtered_df[filtered_df[dim].astype(str) == str(val)]
+            filtered_df = filtered_df[filtered_df[dim].astype(str) == str(val)]
 
     # ---------------- FILTERING LOGIC END ----------------
 
@@ -202,11 +201,9 @@ if uploaded_file:
     # ---------- TAB 1: INNER JOIN + MULTIINDEX SUBCOLUMNS ----------
     with tab1:
         try:
-            # remove Grand Total row from each for row-wise comparison
             base1 = stats1.iloc[:-1].reset_index(drop=True)
             base2 = stats2.iloc[:-1].reset_index(drop=True)
 
-            # INNER JOIN on group_cols to keep only common groups
             if group_cols:
                 merged = base1.merge(
                     base2,
@@ -215,13 +212,11 @@ if uploaded_file:
                     suffixes=(" R1", " R2"),
                 )
             else:
-                # no group_cols: single overall row, treat as common
                 merged = base1.copy()
                 merged = merged.add_suffix(" R1")
                 for col in base2.columns:
                     merged[f"{col} R2"] = base2[col].values
 
-            # build MultiIndex columns: (metric, range)
             metrics = [
                 "Sum of SurveyCount",
                 "Sum of SurveyCount2",
@@ -230,20 +225,16 @@ if uploaded_file:
                 "Weightage (Sumproduct)",
             ]
 
-            # prepare mapping from (metric, range) -> merged column name
             col_map = {}
             for m in metrics:
                 col_map[(m, "R1")] = f"{m} R1"
                 col_map[(m, "R2")] = f"{m} R2"
 
-            # construct dict for final DataFrame
             data_dict = {}
 
-            # dimension/group columns: top-level name, empty second level
             for col in group_cols:
                 data_dict[(col, "")] = merged[col]
 
-            # metric columns with R1/R2 subcolumns
             for m in metrics:
                 data_dict[(m, "R1")] = merged[col_map[(m, "R1")]]
                 data_dict[(m, "R2")] = merged[col_map[(m, "R2")]]
@@ -254,7 +245,6 @@ if uploaded_file:
             st.subheader("Comparison Table (R1 vs R2) - Common Groups Only")
             st.dataframe(multi_df)
 
-            # markdown grand total boxes (unchanged)
             grand_total_1 = stats1.iloc[-1:]
             grand_total_2 = stats2.iloc[-1:]
 
