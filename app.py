@@ -199,7 +199,7 @@ if uploaded_file:
         ["Comparison Table", "Over all Impact Analysis", "Score and Mix Shift Impact Analysis"]
     )
 
-    # ---------- TAB 1: combined table + ORIGINAL markdown grand totals ----------
+    # ---------- TAB 1 ----------
     with tab1:
         try:
             base1 = stats1.iloc[:-1].reset_index(drop=True)
@@ -208,16 +208,10 @@ if uploaded_file:
             merge_cols = group_cols.copy()
             df_merged = base1[merge_cols].copy() if merge_cols else pd.DataFrame()
 
+            # helper: add R1/R2 columns for a metric
             def add_pair(col_name):
-                nonlocal df_merged
-                col_r1 = f"{col_name} R1"
-                col_r2 = f"{col_name} R2"
-                if df_merged.empty and not merge_cols:
-                    df_merged[col_r1] = base1[col_name].values
-                    df_merged[col_r2] = base2[col_name].values
-                else:
-                    df_merged[col_r1] = base1[col_name].values
-                    df_merged[col_r2] = base2[col_name].values
+                df_merged[f"{col_name} R1"] = base1[col_name].values
+                df_merged[f"{col_name} R2"] = base2[col_name].values
 
             add_pair("Sum of SurveyCount")
             add_pair("Sum of SurveyCount2")
@@ -228,7 +222,7 @@ if uploaded_file:
             st.subheader("Comparison Table (R1 vs R2)")
             st.dataframe(df_merged)
 
-            # ORIGINAL markdown grand total boxes (kept as R1/R2 separate boxes)
+            # markdown grand total boxes (unchanged style)
             grand_total_1 = stats1.iloc[-1:]
             grand_total_2 = stats2.iloc[-1:]
 
