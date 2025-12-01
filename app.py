@@ -324,7 +324,7 @@ if uploaded_file:
     with st.popover("📊 Visualize", help="Generate charts from filtered data") as popover:
         st.markdown("### 📈 Chart Generator")
         
-        chart_type = st.popover.selectbox("Chart Type", ["Bar", "Line"])
+        chart_type = popover.selectbox("Chart Type", ["Bar", "Line"])
         
         # Get columns from filtered data
         cols = filtered_df.columns.tolist()
@@ -351,6 +351,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
