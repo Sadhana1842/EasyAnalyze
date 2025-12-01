@@ -32,7 +32,6 @@ if uploaded_file:
         st.session_state.active_filters = OrderedDict()
 
     top_cols = st.columns(6)
-
     for i, col in enumerate(available_dims):
         if top_cols[i % 6].button(col, key=f"addbtn_{col}"):
             if col not in st.session_state.active_filters:
@@ -44,14 +43,8 @@ if uploaded_file:
 
     if st.session_state.active_filters:
         st.sidebar.markdown("### Active Filters")
-
         for dim in list(st.session_state.active_filters.keys()):
-
-            other_filters = {
-                k: v for k, v in st.session_state.active_filters.items()
-                if k != dim and v is not None
-            }
-
+            other_filters = {k: v for k, v in st.session_state.active_filters.items() if k != dim and v is not None}
             if other_filters:
                 mask = pd.Series(True, index=df.index)
                 for k, v in other_filters.items():
@@ -88,7 +81,7 @@ if uploaded_file:
         if val is not None:
             filtered_df = filtered_df[filtered_df[dim].astype(str).str.strip().eq(str(val).strip())]
 
-    # ---------------------- FIXED CALC GROUP STATS ----------------------
+    # ---------------------- REFACTORED CALC GROUP STATS ----------------------
     def calc_group_stats(dataframe, start_date, end_date, group_cols):
         mask = (dataframe["recordeddate"] >= pd.to_datetime(start_date)) & (dataframe["recordeddate"] <= pd.to_datetime(end_date))
         filtered = dataframe.loc[mask].copy()
@@ -110,9 +103,7 @@ if uploaded_file:
                 .reset_index()
             )
         else:
-            grouped = pd.DataFrame([{
-                col: "Grand Total" for col in group_cols
-            } if group_cols else {}])
+            grouped = pd.DataFrame([{}])
             grouped["Sum of SurveyCount"] = total_survey_count
             grouped["Sum of TCR_Yes"] = filtered["Sum of TCR_Yes"].sum()
             grouped["Sum of CSAT_Num"] = filtered["Sum of CSAT_Num"].sum()
@@ -122,9 +113,13 @@ if uploaded_file:
         grouped["CSAT%"] = grouped["Sum of CSAT_Num"] * 100 / grouped["Sum of SurveyCount"].replace(0, 1)
         grouped["Weightage (Sumproduct)"] = (grouped["Sum of SurveyCount2"] / 100) * grouped["TCR%"]
 
+        # Ensure all necessary columns exist for alignment
         final_cols = group_cols + ["Sum of SurveyCount", "Sum of SurveyCount2", "TCR%", "CSAT%", "Weightage (Sumproduct)"] if group_cols else ["Sum of SurveyCount", "Sum of SurveyCount2", "TCR%", "CSAT%", "Weightage (Sumproduct)"]
-        grouped = grouped[final_cols]
+        for col in final_cols:
+            if col not in grouped.columns:
+                grouped[col] = 0 if col not in group_cols else "Grand Total"
 
+        grouped = grouped[final_cols]
         return grouped
 
     active_keys = list(st.session_state.active_filters.keys())
@@ -140,13 +135,14 @@ if uploaded_file:
         try:
             metrics = ["Sum of SurveyCount", "Sum of SurveyCount2", "TCR%", "CSAT%", "Weightage (Sumproduct)"]
 
-            if group_cols:
+            filters_active = any(val is not None for val in st.session_state.active_filters.values())
+
+            if filters_active and group_cols:
                 df_R1 = stats1.copy()
                 df_R2 = stats2.copy()
                 merged = df_R1.merge(df_R2, on=group_cols, how="outer", suffixes=("_R1", "_R2"))
 
                 merged["Impact %"] = merged["Weightage (Sumproduct)_R2"] - merged["Weightage (Sumproduct)_R1"]
-
                 for c in ["TCR%", "Sum of SurveyCount2", "Weightage (Sumproduct)"]:
                     merged[f"{c}_R1"] = pd.to_numeric(merged[f"{c}_R1"], errors="coerce")
                     merged[f"{c}_R2"] = pd.to_numeric(merged[f"{c}_R2"], errors="coerce")
@@ -166,6 +162,7 @@ if uploaded_file:
                 st.write("### Comparison (R1 vs R2 with Impact & Mix/Score)")
                 st.dataframe(merged, use_container_width=True)
 
+            # ------------------- Markdown totals (always show) -------------------
             r1_tot = stats1.iloc[0]
             r2_tot = stats2.iloc[0]
             colR1, colR2 = st.columns(2)
