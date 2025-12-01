@@ -220,7 +220,7 @@ if uploaded_file:
                     "Weightage (Sumproduct)_R1": stats1.iloc[-1]["Weightage (Sumproduct)"],
                     "Weightage (Sumproduct)_R2": stats2.iloc[-1]["Weightage (Sumproduct)"],
                     "Impact %": stats2.iloc[-1]["Weightage (Sumproduct)"] - stats1.iloc[-1]["Weightage (Sumproduct)"],
-                    "Mix Shift Impact": ((stats1["TCR%"] / 100) * stats2["Sum of SurveyCount2"]).round(2)
+                    "Mix Shift Impact": ((stats1["TCR%"] / 100) * stats2["Sum of SurveyCount2"]).round(2),
                     "Score Impact": ((stats1["Sum of SurveyCount2"] / 100) * stats1["TCR%"]).round(2)
                 })
                 
@@ -290,6 +290,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
