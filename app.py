@@ -324,14 +324,14 @@ if uploaded_file:
     with st.popover("📊 Visualize", help="Generate charts from filtered data") as popover:
         st.markdown("### 📈 Chart Generator")
         
-        chart_type = popover.selectbox("Chart Type", ["Bar", "Line"])
+        chart_type = st.selectbox("Chart Type", ["Bar", "Line"])
         
         # Get columns from filtered data
         cols = filtered_df.columns.tolist()
         numeric_cols = filtered_df.select_dtypes(include=['number']).columns.tolist()
         
-        x_axis = popover.selectbox("X-axis", options=cols)
-        y_axis = popover.selectbox("Y-axis", options=numeric_cols)
+        x_axis = st.selectbox("X-axis", options=cols)
+        y_axis = st.selectbox("Y-axis", options=numeric_cols)
         
         col1 = popover.columns(1)
         with col1:
@@ -351,6 +351,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
