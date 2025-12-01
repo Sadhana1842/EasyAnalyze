@@ -152,7 +152,7 @@ if uploaded_file:
     stats1 = calc_group_stats(filtered_df, date_range1[0], date_range1[1], group_cols)
     stats2 = calc_group_stats(filtered_df, date_range2[0], date_range2[1], group_cols)
 
-    tab1, tab2, tab3 = st.tabs(["Comparison Table", "Over all Impact Analysis", "Score and Mix Shift Impact Analysis"])
+    tab1 = st.tabs(["Comparison Table (Range1 vs Range2"])
 
     # =====================================================================
     #                     TAB-1 — FINAL WORKING VERSION
@@ -266,4 +266,5 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
