@@ -45,12 +45,11 @@ if uploaded_file:
     ]
     available_dims = [col for col in df.columns if col not in restricted_cols]
 
-    # Use OrderedDict for deterministic order (keeps behavior stable across reruns)
     if "active_filters" not in st.session_state:
         st.session_state.active_filters = OrderedDict()
 
-    # AVAILABLE DIMENSION BUTTONS MOVED TO MAIN AREA
-    st.markdown("### **Available Dimensions** (Click to add filters)")
+    # Available dimension buttons in MAIN AREA
+    st.markdown("### Available Dimensions (Click to add filters)")
     cols = st.columns(3)
     for i, col in enumerate(available_dims):
         if cols[i % 3].button(col, key=f"addbtn_{col}"):
@@ -58,12 +57,11 @@ if uploaded_file:
                 st.session_state.active_filters[col] = None
                 st.rerun()
 
-    # Active filters stay in sidebar
+    # Active filters in SIDEBAR
     if st.session_state.active_filters:
         st.sidebar.markdown("### Active Filters")
 
         for dim in list(st.session_state.active_filters.keys()):
-            # Build mask by applying all other active filters
             mask = pd.Series(True, index=df.index)
             for other_dim, other_val in st.session_state.active_filters.items():
                 if other_val is not None:
@@ -74,7 +72,6 @@ if uploaded_file:
 
             temp_df = df.loc[mask]
 
-            # Unique values for this column only from filtered subset
             possible_vals_raw = temp_df[dim].dropna().unique().tolist()
             possible_vals = sorted([str(x) for x in possible_vals_raw], key=lambda x: x.lower())
 
@@ -106,9 +103,6 @@ if uploaded_file:
             else:
                 filtered_df = filtered_df[filtered_df[dim].astype(str) == str(val)]
 
-    # REMOVED DATA PREVIEW HERE
-    # st.markdown("### 📊 Filtered Dataset Preview")
-    # st.dataframe(filtered_df.head(10))
     # ---------------- FILTERING LOGIC END ----------------
 
     def calc_group_stats(dataframe, start_date, end_date, group_cols):
@@ -205,37 +199,63 @@ if uploaded_file:
         ["Comparison Table", "Over all Impact Analysis", "Score and Mix Shift Impact Analysis"]
     )
 
+    # ---------- TAB 1: combined table + ORIGINAL markdown grand totals ----------
     with tab1:
         try:
-            col1, col2 = st.columns(2, border=True)
-            with col1:
-                st.subheader("Metrics - Date Range 1")
-                st.dataframe(stats1.iloc[:-1])
-                grand_total_1 = stats1.iloc[-1:]
+            base1 = stats1.iloc[:-1].reset_index(drop=True)
+            base2 = stats2.iloc[:-1].reset_index(drop=True)
+
+            merge_cols = group_cols.copy()
+            df_merged = base1[merge_cols].copy() if merge_cols else pd.DataFrame()
+
+            def add_pair(col_name):
+                nonlocal df_merged
+                col_r1 = f"{col_name} R1"
+                col_r2 = f"{col_name} R2"
+                if df_merged.empty and not merge_cols:
+                    df_merged[col_r1] = base1[col_name].values
+                    df_merged[col_r2] = base2[col_name].values
+                else:
+                    df_merged[col_r1] = base1[col_name].values
+                    df_merged[col_r2] = base2[col_name].values
+
+            add_pair("Sum of SurveyCount")
+            add_pair("Sum of SurveyCount2")
+            add_pair("TCR%")
+            add_pair("CSAT%")
+            add_pair("Weightage (Sumproduct)")
+
+            st.subheader("Comparison Table (R1 vs R2)")
+            st.dataframe(df_merged)
+
+            # ORIGINAL markdown grand total boxes (kept as R1/R2 separate boxes)
+            grand_total_1 = stats1.iloc[-1:]
+            grand_total_2 = stats2.iloc[-1:]
+
+            col_gt1, col_gt2 = st.columns(2)
+            with col_gt1:
                 st.markdown(
                     f"<div style='background-color:grey; padding:7px; font-weight:bold;'>"
-                    f"Grand Total:<br>"
+                    f"Grand Total - Range 1:<br>"
                     f"SurveyCount: {grand_total_1['Sum of SurveyCount'].values[0]}<br>"
                     f"TCR%: {grand_total_1['TCR%'].values[0]:.2%}<br>"
                     f"CSAT%: {grand_total_1['CSAT%'].values[0]:.2%}</div>",
                     unsafe_allow_html=True,
                 )
-
-            with col2:
-                st.subheader("Metrics - Date Range 2")
-                st.dataframe(stats2.iloc[:-1])
-                grand_total_2 = stats2.iloc[-1:]
+            with col_gt2:
                 st.markdown(
                     f"<div style='background-color:grey; padding:10px; font-weight:bold;'>"
-                    f"Grand Total:<br>"
+                    f"Grand Total - Range 2:<br>"
                     f"SurveyCount: {grand_total_2['Sum of SurveyCount'].values[0]}<br>"
                     f"TCR%: {grand_total_2['TCR%'].values[0]:.2%}<br>"
                     f"CSAT%: {grand_total_2['CSAT%'].values[0]:.2%}</div>",
                     unsafe_allow_html=True,
                 )
-        except Exception:
-            st.error("Can't find dataset. Please upload file!")
 
+        except Exception as e:
+            st.error(f"Can't build comparison table: {e}")
+
+    # ---------- TAB 2 ----------
     with tab2:
         st.subheader("Impact %")
         w1 = stats1.iloc[:-1].reset_index(drop=True)
@@ -255,6 +275,7 @@ if uploaded_file:
             unsafe_allow_html=True,
         )
 
+    # ---------- TAB 3 ----------
     with tab3:
         st.header("Mix-shift and Score Impact Analysis")
         w1 = stats1.iloc[:-1].reset_index(drop=True)
