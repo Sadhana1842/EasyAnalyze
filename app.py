@@ -239,6 +239,7 @@ if uploaded_file:
     total_mix_shift = merged["Mix Shift Impact"].sum()
     total_score_impact = merged["Score Impact"].sum()
 
+    st.markdown("<br>", unsafe_allow_html=True)
     col3, col4, col5 = st.columns(3)
     with col3:
         st.markdown(
@@ -261,4 +262,5 @@ if uploaded_file:
         
 else:
     st.info("Upload an Excel file to get started.")
+
 
