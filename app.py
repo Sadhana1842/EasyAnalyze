@@ -334,7 +334,7 @@ if uploaded_file:
         y_axis = st.selectbox("Y-axis", options=numeric_cols)
         
         
-        if popover.button("Generate Chart", use_container_width=True):
+        if st.button("Generate Chart", use_container_width=True):
             fig, ax = plt.subplots(figsize=(10, 6))
             
             if chart_type == "Bar":
@@ -346,10 +346,11 @@ if uploaded_file:
             
             ax.set_xlabel(x_axis)
             ax.set_ylabel(y_axis)
-            popover.pyplot(fig)
+            st.pyplot(fig)
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
