@@ -201,31 +201,35 @@ if uploaded_file:
                                                   [f"{m}_R2" for m in metrics] +
                                                   ["Impact %", "Mix Shift Impact", "Score Impact"])
                 merged.columns = pd.MultiIndex.from_tuples(multi_cols)
-            
+    
             else:
-               # --- First load: only show total row ---
+                # --- Default single-row total display ---
                 total_dict = {}
                 if base:
                     total_dict.update({g: "Grand Total" for g in base})
-                
+    
+                # Compute totals directly from stats1/stats2 to ensure alignment
+                r1_tot = stats1.iloc[0] if not stats1.empty else pd.Series()
+                r2_tot = stats2.iloc[0] if not stats2.empty else pd.Series()
+    
                 total_dict.update({
-                    "Sum of SurveyCount_R1": stats1.iloc[-1]["Sum of SurveyCount"],
-                    "Sum of SurveyCount_R2": stats2.iloc[-1]["Sum of SurveyCount"],
-                    "Sum of SurveyCount2_R1": stats1.iloc[-1]["Sum of SurveyCount2"],
-                    "Sum of SurveyCount2_R2": stats2.iloc[-1]["Sum of SurveyCount2"],
-                    "TCR%_R1": stats1.iloc[-1]["TCR%"],
-                    "TCR%_R2": stats2.iloc[-1]["TCR%"],
-                    "CSAT%_R1": stats1.iloc[-1]["CSAT%"],
-                    "CSAT%_R2": stats2.iloc[-1]["CSAT%"],
-                    "Weightage (Sumproduct)_R1": stats1.iloc[-1]["Weightage (Sumproduct)"],
-                    "Weightage (Sumproduct)_R2": stats2.iloc[-1]["Weightage (Sumproduct)"],
-                    "Impact %": stats2.iloc[-1]["Weightage (Sumproduct)"] - stats1.iloc[-1]["Weightage (Sumproduct)"],
-                    "Mix Shift Impact": ((stats1.iloc[-1]["TCR%"] / 100) * stats2.iloc[-1]["Sum of SurveyCount2"]).round(2),
-                    "Score Impact": ((stats1.iloc[-1]["Sum of SurveyCount2"] / 100) * stats1.iloc[-1]["TCR%"]).round(2)
+                    "Sum of SurveyCount_R1": r1_tot.get("Sum of SurveyCount", 0),
+                    "Sum of SurveyCount_R2": r2_tot.get("Sum of SurveyCount", 0),
+                    "Sum of SurveyCount2_R1": r1_tot.get("Sum of SurveyCount2", 0),
+                    "Sum of SurveyCount2_R2": r2_tot.get("Sum of SurveyCount2", 0),
+                    "TCR%_R1": r1_tot.get("TCR%", 0),
+                    "TCR%_R2": r2_tot.get("TCR%", 0),
+                    "CSAT%_R1": r1_tot.get("CSAT%", 0),
+                    "CSAT%_R2": r2_tot.get("CSAT%", 0),
+                    "Weightage (Sumproduct)_R1": r1_tot.get("Weightage (Sumproduct)", 0),
+                    "Weightage (Sumproduct)_R2": r2_tot.get("Weightage (Sumproduct)", 0),
+                    "Impact %": r2_tot.get("Weightage (Sumproduct)", 0) - r1_tot.get("Weightage (Sumproduct)", 0),
+                    "Mix Shift Impact": ((r1_tot.get("TCR%", 0)/100) * r2_tot.get("Sum of SurveyCount2", 0)).round(2),
+                    "Score Impact": ((r1_tot.get("Sum of SurveyCount2", 0)/100) * r2_tot.get("TCR%", 0)).round(2)
                 })
-                
+    
                 total_row = pd.DataFrame([total_dict])
-
+    
                 # MultiIndex columns
                 multi_cols = []
                 for g in base: multi_cols.append((g, ""))
@@ -243,26 +247,24 @@ if uploaded_file:
             st.write("### Comparison (R1 vs R2 with Impact & Mix/Score)")
             st.dataframe(merged, use_container_width=True)
     
-            # --- Existing + New total boxes ---
-            gt_r1 = stats1.iloc[-1]
-            gt_r2 = stats2.iloc[-1]
+            # --- Grand Total Boxes ---
             colR1, colR2 = st.columns(2)
             with colR1:
                 st.markdown("### **Grand Total — R1**")
                 st.markdown(f"<div style='background-color:grey; padding:10px; font-weight:bold;'>"
-                            f"<b>Sum of SurveyCount:</b> {int(gt_r1.get('Sum of SurveyCount', 'N/A'))}<br>"
-                            f"<b>TCR %:</b> {gt_r1.get('TCR%', 0):.2f}%<br>"
-                            f"<b>CSAT %:</b> {gt_r1.get('CSAT%', 0):.2f}%<br></div>",
+                            f"<b>Sum of SurveyCount:</b> {int(r1_tot.get('Sum of SurveyCount', 0))}<br>"
+                            f"<b>TCR %:</b> {r1_tot.get('TCR%', 0):.2f}%<br>"
+                            f"<b>CSAT %:</b> {r1_tot.get('CSAT%', 0):.2f}%<br></div>",
                             unsafe_allow_html=True)
             with colR2:
                 st.markdown("### **Grand Total — R2**")
                 st.markdown(f"<div style='background-color:grey; padding:10px; font-weight:bold;'>"
-                            f"<b>Sum of SurveyCount:</b> {int(gt_r2.get('Sum of SurveyCount', 'N/A'))}<br>"
-                            f"<b>TCR %:</b> {gt_r2.get('TCR%', 0):.2f}%<br>"
-                            f"<b>CSAT %:</b> {gt_r2.get('CSAT%', 0):.2f}%<br></div>",
+                            f"<b>Sum of SurveyCount:</b> {int(r2_tot.get('Sum of SurveyCount', 0))}<br>"
+                            f"<b>TCR %:</b> {r2_tot.get('TCR%', 0):.2f}%<br>"
+                            f"<b>CSAT %:</b> {r2_tot.get('CSAT%', 0):.2f}%<br></div>",
                             unsafe_allow_html=True)
     
-            # New total boxes
+            # --- Total Impact Boxes ---
             tot_impact = merged["Impact %"].sum()
             tot_mix_shift = merged["Mix Shift Impact"].sum()
             tot_score_impact = merged["Score Impact"].sum()
@@ -290,6 +292,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
