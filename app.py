@@ -333,7 +333,7 @@ if uploaded_file:
         x_axis = st.selectbox("X-axis", options=cols)
         y_axis = st.selectbox("Y-axis", options=numeric_cols)
         
-        col1 = popover.columns(1)
+        col1 = st.columns(1)
         with col1:
             if popover.button("Generate Chart", use_container_width=True):
                 fig, ax = plt.subplots(figsize=(10, 6))
@@ -351,6 +351,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
