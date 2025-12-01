@@ -78,7 +78,7 @@ if uploaded_file:
         if val is not None:
             filtered_df = filtered_df[filtered_df[dim].astype(str).str.strip().eq(str(val).strip())]
 
-    # ---------------------- Unified calc_group_stats ----------------------
+    # ---------------------- calc_group_stats ----------------------
     def calc_group_stats(dataframe, start_date, end_date, group_cols):
         mask = (dataframe["recordeddate"] >= pd.to_datetime(start_date)) & (dataframe["recordeddate"] <= pd.to_datetime(end_date))
         filtered = dataframe.loc[mask].copy()
@@ -125,48 +125,49 @@ if uploaded_file:
 
     with tab1:
         try:
-            base = group_cols.copy()
-            metrics = ["Sum of SurveyCount", "Sum of SurveyCount2", "TCR%", "CSAT%", "Weightage (Sumproduct)"]
             filters_active = any(val is not None for val in st.session_state.active_filters.values())
 
-            # ------------------- Unified merge logic -------------------
-            df_R1 = stats1.copy()
-            df_R2 = stats2.copy()
-            if not base:
-                df_R1["dummy"] = 1
-                df_R2["dummy"] = 1
-                merged = df_R1.merge(df_R2, on="dummy", suffixes=("_R1", "_R2")).drop(columns=["dummy"])
-            else:
-                merged = df_R1.merge(df_R2, on=base, how="outer", suffixes=("_R1", "_R2"))
-            # ------------------------------------------------------------
+            if filters_active:
+                # ------------------- Full table for filtered/grouped -------------------
+                base = group_cols.copy()
+                metrics = ["Sum of SurveyCount", "Sum of SurveyCount2", "TCR%", "CSAT%", "Weightage (Sumproduct)"]
 
-            merged["Impact %"] = merged["Weightage (Sumproduct)_R2"] - merged["Weightage (Sumproduct)_R1"]
+                df_R1 = stats1.copy()
+                df_R2 = stats2.copy()
+                if not base:
+                    df_R1["dummy"] = 1
+                    df_R2["dummy"] = 1
+                    merged = df_R1.merge(df_R2, on="dummy", suffixes=("_R1", "_R2")).drop(columns=["dummy"])
+                else:
+                    merged = df_R1.merge(df_R2, on=base, how="outer", suffixes=("_R1", "_R2"))
 
-            w1 = df_R1.reset_index(drop=True)
-            w2 = df_R2.reset_index(drop=True)
-            for c in ["TCR%", "Sum of SurveyCount2", "Weightage (Sumproduct)"]:
-                if c in w1.columns: w1[c] = pd.to_numeric(w1[c], errors="coerce")
-                if c in w2.columns: w2[c] = pd.to_numeric(w2[c], errors="coerce")
+                merged["Impact %"] = merged["Weightage (Sumproduct)_R2"] - merged["Weightage (Sumproduct)_R1"]
 
-            merged["Mix Shift Impact"] = ((w1["TCR%"] / 100) * w2["Sum of SurveyCount2"]).round(2)
-            merged["Score Impact"] = ((w1["Sum of SurveyCount2"] / 100) * w2["TCR%"]).round(2)
+                w1 = df_R1.reset_index(drop=True)
+                w2 = df_R2.reset_index(drop=True)
+                for c in ["TCR%", "Sum of SurveyCount2", "Weightage (Sumproduct)"]:
+                    if c in w1.columns: w1[c] = pd.to_numeric(w1[c], errors="coerce")
+                    if c in w2.columns: w2[c] = pd.to_numeric(w2[c], errors="coerce")
 
-            multi_cols = []
-            for g in base: multi_cols.append((g, ""))
-            for m in metrics:
-                multi_cols.append((m, "R1"))
-                multi_cols.append((m, "R2"))
-            multi_cols += [("Impact %", ""), ("Mix Shift Impact", ""), ("Score Impact", "")]
-            merged = merged.reindex(columns=[*base] +
-                                              [f"{m}_R1" for m in metrics] +
-                                              [f"{m}_R2" for m in metrics] +
-                                              ["Impact %", "Mix Shift Impact", "Score Impact"])
-            merged.columns = pd.MultiIndex.from_tuples(multi_cols)
+                merged["Mix Shift Impact"] = ((w1["TCR%"] / 100) * w2["Sum of SurveyCount2"]).round(2)
+                merged["Score Impact"] = ((w1["Sum of SurveyCount2"] / 100) * w2["TCR%"]).round(2)
 
-            st.write("### Comparison (R1 vs R2 with Impact & Mix/Score)")
-            st.dataframe(merged, use_container_width=True)
+                multi_cols = []
+                for g in base: multi_cols.append((g, ""))
+                for m in metrics:
+                    multi_cols.append((m, "R1"))
+                    multi_cols.append((m, "R2"))
+                multi_cols += [("Impact %", ""), ("Mix Shift Impact", ""), ("Score Impact", "")]
+                merged = merged.reindex(columns=[*base] +
+                                                  [f"{m}_R1" for m in metrics] +
+                                                  [f"{m}_R2" for m in metrics] +
+                                                  ["Impact %", "Mix Shift Impact", "Score Impact"])
+                merged.columns = pd.MultiIndex.from_tuples(multi_cols)
 
-            # Grand Total Boxes
+                st.write("### Comparison (R1 vs R2 with Impact & Mix/Score)")
+                st.dataframe(merged, use_container_width=True)
+
+            # ------------------- Default markdown totals for no filters -------------------
             r1_tot = stats1.iloc[0]
             r2_tot = stats2.iloc[0]
             colR1, colR2 = st.columns(2)
@@ -186,9 +187,9 @@ if uploaded_file:
                             unsafe_allow_html=True)
 
             # Total Impact Boxes
-            tot_impact = merged["Impact %"].sum()
-            tot_mix_shift = merged["Mix Shift Impact"].sum()
-            tot_score_impact = merged["Score Impact"].sum()
+            tot_impact = (r2_tot["Weightage (Sumproduct)"] - r1_tot["Weightage (Sumproduct)"])
+            tot_mix_shift = ((r1_tot["TCR%"] / 100) * r2_tot["Sum of SurveyCount2"]).round(2)
+            tot_score_impact = ((r1_tot["Sum of SurveyCount2"] / 100) * r2_tot["TCR%"]).round(2)
             col3, col4, col5 = st.columns(3)
             with col3:
                 st.markdown("### **Total Impact %**")
