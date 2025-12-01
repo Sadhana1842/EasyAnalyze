@@ -333,24 +333,24 @@ if uploaded_file:
         x_axis = st.selectbox("X-axis", options=cols)
         y_axis = st.selectbox("Y-axis", options=numeric_cols)
         
-        col1 = st.columns(1)
-        with col1:
-            if popover.button("Generate Chart", use_container_width=True):
-                fig, ax = plt.subplots(figsize=(10, 6))
-                
-                if chart_type == "Bar":
-                    ax.bar(filtered_df[x_axis], filtered_df[y_axis])
-                    ax.set_title(f"Bar: {y_axis} by {x_axis}")
-                else:  # Line
-                    ax.plot(filtered_df[x_axis], filtered_df[y_axis], marker='o')
-                    ax.set_title(f"Line: {y_axis} vs {x_axis}")
-                
-                ax.set_xlabel(x_axis)
-                ax.set_ylabel(y_axis)
-                popover.pyplot(fig)
+        
+        if popover.button("Generate Chart", use_container_width=True):
+            fig, ax = plt.subplots(figsize=(10, 6))
+            
+            if chart_type == "Bar":
+                ax.bar(filtered_df[x_axis], filtered_df[y_axis])
+                ax.set_title(f"Bar: {y_axis} by {x_axis}")
+            else:  # Line
+                ax.plot(filtered_df[x_axis], filtered_df[y_axis], marker='o')
+                ax.set_title(f"Line: {y_axis} vs {x_axis}")
+            
+            ax.set_xlabel(x_axis)
+            ax.set_ylabel(y_axis)
+            popover.pyplot(fig)
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
