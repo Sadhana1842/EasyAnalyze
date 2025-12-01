@@ -3,7 +3,7 @@ import pandas as pd
 from collections import OrderedDict
 
 st.set_page_config(page_title="HP EasyAnalyze", layout="wide", page_icon="🧊")
-st.title("HP EasyAnalyze")
+st.title("HP EasyAnalyze 🧊")
 
 uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
 
@@ -18,7 +18,7 @@ if uploaded_file:
     min_date = df["recordeddate"].min()
     max_date = df["recordeddate"].max()
 
-    st.sidebar.write("Please select date ranges")
+    st.sidebar.write("Please select date ranges 🗓️")
     date_range1 = st.sidebar.date_input(
         "Date Range 1",
         value=(min_date, max_date),
@@ -33,7 +33,6 @@ if uploaded_file:
     )
     
     # ---------------- FILTERING LOGIC START ----------------
-    st.sidebar.markdown("### 🔍 Add Filters")
     restricted_cols = [
         "recordeddate",
         "Sum of SurveyCount",
@@ -49,7 +48,7 @@ if uploaded_file:
         st.session_state.active_filters = OrderedDict()
 
     # Dimension buttons main area
-    st.markdown("### Available Dimensions (Click to add filters)")
+    st.markdown("### Available Dimensions 🔍")
     cols = st.columns(3)
     for i, col in enumerate(available_dims):
         if cols[i % 3].button(col, key=f"addbtn_{col}"):
@@ -59,7 +58,7 @@ if uploaded_file:
 
     # Active filters sidebar
     if st.session_state.active_filters:
-        st.sidebar.markdown("### Active Filters")
+        st.sidebar.markdown("### Active Filters 🔍")
         for dim in list(st.session_state.active_filters.keys()):
             mask = pd.Series(True, index=df.index)
             for other_dim, other_val in st.session_state.active_filters.items():
@@ -231,7 +230,7 @@ if uploaded_file:
     else:
         styled_multi_df = multi_df.style  # fallback, no styling
     
-    st.subheader("Comparison Table with Impact Analyses")
+    st.subheader("Comparison Table 📚")
     st.dataframe(styled_multi_df)
 
 
@@ -285,25 +284,11 @@ if uploaded_file:
             f"Total Score Impact:<br>{total_score_impact:.4f}</div>",
             unsafe_allow_html=True,
         )
-        import streamlit as st
 
-    # Add CSS for fixed bottom-left button for the popover
-    st.markdown(
-        """
-        <style>
-        .floating-popover-btn {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            z-index: 2000;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
