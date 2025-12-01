@@ -334,7 +334,7 @@ if uploaded_file:
         y_axis = st.selectbox("Y-axis", options=numeric_cols)
         
         
-        if st.button("Generate", width=20):
+        if st.button("Generate", width=100):
             fig, ax = plt.subplots(figsize=(10, 6))
             
             if chart_type == "Bar":
@@ -350,6 +350,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
