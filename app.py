@@ -275,17 +275,18 @@ if uploaded_file:
         )
     with col4:
         st.markdown(
-            f"<div style='background-color:lightgrey; padding:7px; font-weight:bold; border:1px solid grey;'>"
+            f"<div style='background-color:grey; padding:7px; font-weight:bold; border:1px solid grey;'>"
             f"Total Mix Shift Impact:<br>{total_mix_shift:.4f}</div>",
             unsafe_allow_html=True,
         )
     with col5:
         st.markdown(
-            f"<div style='background-color:lightgrey; padding:7px; font-weight:bold; border:1px solid grey;'>"
+            f"<div style='background-color:grey; padding:7px; font-weight:bold; border:1px solid grey;'>"
             f"Total Score Impact:<br>{total_score_impact:.4f}</div>",
             unsafe_allow_html=True,
         )
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
