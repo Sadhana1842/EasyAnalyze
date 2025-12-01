@@ -203,9 +203,12 @@ if uploaded_file:
                 merged.columns = pd.MultiIndex.from_tuples(multi_cols)
             
             else:
-                # --- First load: only show total row ---
-                total_row = pd.DataFrame([{
-                    **{g: "Grand Total" for g in base} if base else {},
+               # --- First load: only show total row ---
+                total_dict = {}
+                if base:
+                    total_dict.update({g: "Grand Total" for g in base})
+                
+                total_dict.update({
                     "Sum of SurveyCount_R1": stats1.iloc[-1]["Sum of SurveyCount"],
                     "Sum of SurveyCount_R2": stats2.iloc[-1]["Sum of SurveyCount"],
                     "Sum of SurveyCount2_R1": stats1.iloc[-1]["Sum of SurveyCount2"],
@@ -217,9 +220,12 @@ if uploaded_file:
                     "Weightage (Sumproduct)_R1": stats1.iloc[-1]["Weightage (Sumproduct)"],
                     "Weightage (Sumproduct)_R2": stats2.iloc[-1]["Weightage (Sumproduct)"],
                     "Impact %": stats2.iloc[-1]["Weightage (Sumproduct)"] - stats1.iloc[-1]["Weightage (Sumproduct)"],
-                    "Mix Shift Impact": 0,  # show 0 as placeholder
-                    "Score Impact": 0        # show 0 as placeholder
-                }])
+                    "Mix Shift Impact": 0,  # placeholder
+                    "Score Impact": 0        # placeholder
+                })
+                
+                total_row = pd.DataFrame([total_dict])
+
                 # MultiIndex columns
                 multi_cols = []
                 for g in base: multi_cols.append((g, ""))
@@ -284,6 +290,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
