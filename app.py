@@ -199,30 +199,62 @@ if uploaded_file:
         ["Comparison Table", "Over all Impact Analysis", "Score and Mix Shift Impact Analysis"]
     )
 
-    # ---------- TAB 1 ----------
+    # ---------- TAB 1: INNER JOIN + MULTIINDEX SUBCOLUMNS ----------
     with tab1:
         try:
+            # remove Grand Total row from each for row-wise comparison
             base1 = stats1.iloc[:-1].reset_index(drop=True)
             base2 = stats2.iloc[:-1].reset_index(drop=True)
 
-            merge_cols = group_cols.copy()
-            df_merged = base1[merge_cols].copy() if merge_cols else pd.DataFrame()
+            # INNER JOIN on group_cols to keep only common groups
+            if group_cols:
+                merged = base1.merge(
+                    base2,
+                    on=group_cols,
+                    how="inner",
+                    suffixes=(" R1", " R2"),
+                )
+            else:
+                # no group_cols: single overall row, treat as common
+                merged = base1.copy()
+                merged = merged.add_suffix(" R1")
+                for col in base2.columns:
+                    merged[f"{col} R2"] = base2[col].values
 
-            # helper: add R1/R2 columns for a metric
-            def add_pair(col_name):
-                df_merged[f"{col_name} R1"] = base1[col_name].values
-                df_merged[f"{col_name} R2"] = base2[col_name].values
+            # build MultiIndex columns: (metric, range)
+            metrics = [
+                "Sum of SurveyCount",
+                "Sum of SurveyCount2",
+                "TCR%",
+                "CSAT%",
+                "Weightage (Sumproduct)",
+            ]
 
-            add_pair("Sum of SurveyCount")
-            add_pair("Sum of SurveyCount2")
-            add_pair("TCR%")
-            add_pair("CSAT%")
-            add_pair("Weightage (Sumproduct)")
+            # prepare mapping from (metric, range) -> merged column name
+            col_map = {}
+            for m in metrics:
+                col_map[(m, "R1")] = f"{m} R1"
+                col_map[(m, "R2")] = f"{m} R2"
 
-            st.subheader("Comparison Table (R1 vs R2)")
-            st.dataframe(df_merged)
+            # construct dict for final DataFrame
+            data_dict = {}
 
-            # markdown grand total boxes (unchanged style)
+            # dimension/group columns: top-level name, empty second level
+            for col in group_cols:
+                data_dict[(col, "")] = merged[col]
+
+            # metric columns with R1/R2 subcolumns
+            for m in metrics:
+                data_dict[(m, "R1")] = merged[col_map[(m, "R1")]]
+                data_dict[(m, "R2")] = merged[col_map[(m, "R2")]]
+
+            multi_df = pd.DataFrame(data_dict)
+            multi_df.columns = pd.MultiIndex.from_tuples(multi_df.columns)
+
+            st.subheader("Comparison Table (R1 vs R2) - Common Groups Only")
+            st.dataframe(multi_df)
+
+            # markdown grand total boxes (unchanged)
             grand_total_1 = stats1.iloc[-1:]
             grand_total_2 = stats2.iloc[-1:]
 
