@@ -286,8 +286,55 @@ if uploaded_file:
             unsafe_allow_html=True,
         )
 
+    # Add CSS for fixed bottom-left button for the popover
+    st.markdown(
+        """
+        <style>
+        .floating-popover-btn {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 2000;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    
+    # Create the popover with fixed-position trigger button
+    with st.popover(label="📊 Visualize Data", key="viz_popover") as popover:
+        chart_type = popover.selectbox("Select chart type", ["Bar", "Line"])
+    
+        # Prepare the columns for axis selection (exclude non-numeric for y axis optionally)
+        cols = filtered_df.columns.tolist() if 'filtered_df' in locals() else []
+        # Optionally, for y-axis, select only numeric columns:
+        numeric_cols = filtered_df.select_dtypes(include="number").columns.tolist() if 'filtered_df' in locals() else []
+    
+        x_axis = popover.selectbox("X-axis", options=cols)
+        y_axis = popover.selectbox("Y-axis", options=numeric_cols if chart_type in ['Bar', 'Line'] else cols)
+    
+        if popover.button("Generate Chart"):
+            import matplotlib.pyplot as plt
+            fig, ax = plt.subplots()
+    
+            if chart_type == "Bar":
+                ax.bar(filtered_df[x_axis], filtered_df[y_axis])
+                ax.set_xlabel(x_axis)
+                ax.set_ylabel(y_axis)
+                ax.set_title(f"Bar Chart of {y_axis} by {x_axis}")
+    
+            elif chart_type == "Line":
+                ax.plot(filtered_df[x_axis], filtered_df[y_axis])
+                ax.set_xlabel(x_axis)
+                ax.set_ylabel(y_axis)
+                ax.set_title(f"Line Chart of {y_axis} by {x_axis}")
+    
+            popover.pyplot(fig)
+
+
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
