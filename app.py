@@ -321,7 +321,7 @@ if uploaded_file:
     </style>
     """, unsafe_allow_html=True)
     
-    with st.popover("📊 Visualize", help="Generate charts from filtered data") as popover:
+    with st.popover("📊 Visualize", help="Generate charts from filtered data", width="stretch") as popover:
         st.markdown("### 📈 Chart Generator")
         
         chart_type = st.selectbox("Chart Type", ["Bar", "Line"])
@@ -350,6 +350,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
