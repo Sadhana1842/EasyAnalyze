@@ -213,7 +213,7 @@ if uploaded_file:
     multi_df = pd.DataFrame(data_dict)
     multi_df.columns = pd.MultiIndex.from_tuples(multi_df.columns)
 
-    # Color style function for Impact % column
+    # Color style function for Impact % column (MultiIndex version)
     def color_impact(val):
         if pd.isna(val):
             return 'color: black'
@@ -223,9 +223,13 @@ if uploaded_file:
             return 'background-color: #f8d7da; color: #721c24'  # Light red
         else:
             return 'color: black'
-
-    styled_multi_df = multi_df.style.applymap(color_impact, subset=pd.IndexSlice[["Impact %"], :])
-
+    
+    # CORRECT MultiIndex subset reference for Impact % column
+    styled_multi_df = multi_df.style.applymap(
+        color_impact, 
+        subset=pd.IndexSlice[(("Impact %", ""), slice(None))]
+    )
+    
     st.subheader("Comparison Table with Impact Analyses")
     st.dataframe(styled_multi_df)
 
@@ -282,3 +286,4 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
