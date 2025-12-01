@@ -125,21 +125,18 @@ if uploaded_file:
 
     with tab1:
         try:
-            filters_active = any(val is not None for val in st.session_state.active_filters.values())
+            metrics = ["Sum of SurveyCount", "Sum of SurveyCount2", "TCR%", "CSAT%", "Weightage (Sumproduct)"]
 
-            if filters_active:
+            if group_cols:
                 # ------------------- Full table for filtered/grouped -------------------
-                base = group_cols.copy()
-                metrics = ["Sum of SurveyCount", "Sum of SurveyCount2", "TCR%", "CSAT%", "Weightage (Sumproduct)"]
-
                 df_R1 = stats1.copy()
                 df_R2 = stats2.copy()
-                if not base:
+                if not group_cols:
                     df_R1["dummy"] = 1
                     df_R2["dummy"] = 1
                     merged = df_R1.merge(df_R2, on="dummy", suffixes=("_R1", "_R2")).drop(columns=["dummy"])
                 else:
-                    merged = df_R1.merge(df_R2, on=base, how="outer", suffixes=("_R1", "_R2"))
+                    merged = df_R1.merge(df_R2, on=group_cols, how="outer", suffixes=("_R1", "_R2"))
 
                 merged["Impact %"] = merged["Weightage (Sumproduct)_R2"] - merged["Weightage (Sumproduct)_R1"]
 
@@ -153,12 +150,12 @@ if uploaded_file:
                 merged["Score Impact"] = ((w1["Sum of SurveyCount2"] / 100) * w2["TCR%"]).round(2)
 
                 multi_cols = []
-                for g in base: multi_cols.append((g, ""))
+                for g in group_cols: multi_cols.append((g, ""))
                 for m in metrics:
                     multi_cols.append((m, "R1"))
                     multi_cols.append((m, "R2"))
                 multi_cols += [("Impact %", ""), ("Mix Shift Impact", ""), ("Score Impact", "")]
-                merged = merged.reindex(columns=[*base] +
+                merged = merged.reindex(columns=[*group_cols] +
                                                   [f"{m}_R1" for m in metrics] +
                                                   [f"{m}_R2" for m in metrics] +
                                                   ["Impact %", "Mix Shift Impact", "Score Impact"])
@@ -167,7 +164,7 @@ if uploaded_file:
                 st.write("### Comparison (R1 vs R2 with Impact & Mix/Score)")
                 st.dataframe(merged, use_container_width=True)
 
-            # ------------------- Default markdown totals for no filters -------------------
+            # ------------------- Markdown totals for default/no filters -------------------
             r1_tot = stats1.iloc[0]
             r2_tot = stats2.iloc[0]
             colR1, colR2 = st.columns(2)
@@ -186,7 +183,6 @@ if uploaded_file:
                             f"<b>CSAT %:</b> {r2_tot.get('CSAT%', 0):.2f}%<br></div>",
                             unsafe_allow_html=True)
 
-            # Total Impact Boxes
             tot_impact = (r2_tot["Weightage (Sumproduct)"] - r1_tot["Weightage (Sumproduct)"])
             tot_mix_shift = ((r1_tot["TCR%"] / 100) * r2_tot["Sum of SurveyCount2"]).round(2)
             tot_score_impact = ((r1_tot["Sum of SurveyCount2"] / 100) * r2_tot["TCR%"]).round(2)
