@@ -46,10 +46,22 @@ if uploaded_file:
         st.sidebar.markdown("### Active Filters")
 
         for dim in list(st.session_state.active_filters.keys()):
-            mask = pd.Series(True, index=df.index)
-            for other_dim, other_val in st.session_state.active_filters.items():
-                if other_val is not None and other_dim != dim:
-                    mask &= df[other_dim].astype(str).str.strip().eq(str(other_val).strip())
+
+            # ==========================================================
+            #  ✔️ REPLACED MASK LOGIC (FASTER, VECTORIZED)
+            # ==========================================================
+            other_filters = {
+                k: v for k, v in st.session_state.active_filters.items()
+                if k != dim and v is not None
+            }
+
+            if other_filters:
+                mask = pd.Series(True, index=df.index)
+                for k, v in other_filters.items():
+                    mask &= df[k].astype(str).str.strip().eq(str(v).strip())
+            else:
+                mask = pd.Series(True, index=df.index)
+            # ==========================================================
 
             temp_df = df.loc[mask]
             possible_vals_raw = temp_df[dim].dropna().unique().tolist()
@@ -153,7 +165,6 @@ if uploaded_file:
             df_R1 = stats1[:-1].copy()
             df_R2 = stats2[:-1].copy()
 
-            # merge groups
             if base:
                 merged = df_R1.merge(df_R2, on=base, how="outer", suffixes=("_R1", "_R2"))
             else:
@@ -161,19 +172,15 @@ if uploaded_file:
                 df_R2["dummy"] = 1
                 merged = df_R1.merge(df_R2, on="dummy", suffixes=("_R1", "_R2")).drop(columns=["dummy"])
 
-            # --- Construct MultiIndex columns in EXACT order ---
             multi_cols = []
 
-            # grouping columns first
             for g in base:
                 multi_cols.append((g, ""))
 
-            # metrics → (metric, R1), (metric, R2)
             for m in metrics:
                 multi_cols.append((m, "R1"))
                 multi_cols.append((m, "R2"))
 
-            # assign this multiindex
             merged = merged.reindex(columns=[
                 *base,
                 *[f"{m}_R1" for m in metrics],
@@ -289,15 +296,3 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
-
-
-
-
-
-
-
-
-
-
-
-
