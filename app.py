@@ -55,7 +55,7 @@ if uploaded_file:
         if cols[i % 3].button(col, key=f"addbtn_{col}"):
             if col not in st.session_state.active_filters:
                 st.session_state.active_filters[col] = None
-                st.experimental_rerun()
+                st.rerun()
 
     # Active filters sidebar
     if st.session_state.active_filters:
@@ -85,10 +85,10 @@ if uploaded_file:
             reset_col, remove_col = st.sidebar.columns(2)
             if reset_col.button(f"🔁 Reset {dim}", key=f"reset_{dim}"):
                 st.session_state.active_filters[dim] = None
-                st.experimental_rerun()
+                st.rerun()
             if remove_col.button(f"❌ Remove {dim}", key=f"remove_{dim}"):
                 del st.session_state.active_filters[dim]
-                st.experimental_rerun()
+                st.rerun()
 
     else:
         st.sidebar.info("No dimensions selected. Click a dimension above to add it as a filter.")
@@ -288,5 +288,6 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
