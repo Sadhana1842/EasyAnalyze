@@ -42,12 +42,13 @@ if uploaded_file:
         "Sum of TCR_No",
         "Sum of CSAT_Num",
     ]
+    
     available_dims = [col for col in df.columns if col not in restricted_cols]
 
     if "active_filters" not in st.session_state:
         st.session_state.active_filters = OrderedDict()
 
-    # Available filter buttons in main area
+    # Dimension buttons main area
     st.markdown("### Available Dimensions (Click to add filters)")
     cols = st.columns(3)
     for i, col in enumerate(available_dims):
@@ -56,7 +57,7 @@ if uploaded_file:
                 st.session_state.active_filters[col] = None
                 st.experimental_rerun()
 
-    # Active filters in sidebar
+    # Active filters sidebar
     if st.session_state.active_filters:
         st.sidebar.markdown("### Active Filters")
         for dim in list(st.session_state.active_filters.keys()):
@@ -64,7 +65,6 @@ if uploaded_file:
             for other_dim, other_val in st.session_state.active_filters.items():
                 if other_val is not None:
                     mask &= df[other_dim].astype(str).eq(str(other_val))
-
             temp_df = df.loc[mask]
             possible_vals_raw = temp_df[dim].dropna().unique().tolist()
             possible_vals = sorted([str(x) for x in possible_vals_raw], key=lambda x: x.lower())
@@ -89,19 +89,20 @@ if uploaded_file:
             if remove_col.button(f"❌ Remove {dim}", key=f"remove_{dim}"):
                 del st.session_state.active_filters[dim]
                 st.experimental_rerun()
+
     else:
         st.sidebar.info("No dimensions selected. Click a dimension above to add it as a filter.")
 
-    # Apply active filters
+    # Apply active filters to dataframe
     filtered_df = df.copy()
     for dim, val in st.session_state.active_filters.items():
         if val is not None:
             filtered_df = filtered_df[filtered_df[dim].astype(str) == str(val)]
-    
+
     # ---------------- FILTERING LOGIC END ----------------
     
     def calc_group_stats(dataframe, start_date, end_date, group_cols):
-        mask = (dataframe["recordeddate"] >= pd.to_datetime(start_date)) & \
+        mask = (dataframe["recordeddate"] >= pd.to_datetime(start_date)) &\
                (dataframe["recordeddate"] <= pd.to_datetime(end_date))
         filtered = dataframe.loc[mask].copy()
 
@@ -134,10 +135,10 @@ if uploaded_file:
         grouped["Sum of SurveyCount2"] = grouped["Sum of SurveyCount2"].round(2)
 
         grouped["TCR%"] = grouped.apply(
-            lambda r: (r["Sum of TCR_Yes"] * 100.0 / r["Sum of SurveyCount"]) if r["Sum of SurveyCount"] else 0.0, axis=1)
+            lambda r: (r["Sum of TCR_Yes"]*100.0/r["Sum of SurveyCount"]) if r["Sum of SurveyCount"] else 0.0, axis=1)
         grouped["CSAT%"] = grouped.apply(
-            lambda r: (r["Sum of CSAT_Num"] * 100.0 / r["Sum of SurveyCount"]) if r["Sum of SurveyCount"] else 0.0, axis=1)
-        grouped["Weightage (Sumproduct)"] = ((grouped["Sum of SurveyCount2"] / 100) * grouped["TCR%"]).round(4)
+            lambda r: (r["Sum of CSAT_Num"]*100.0/r["Sum of SurveyCount"]) if r["Sum of SurveyCount"] else 0.0, axis=1)
+        grouped["Weightage (Sumproduct)"] = ((grouped["Sum of SurveyCount2"]/100)*grouped["TCR%"]).round(4)
 
         total_row = pd.Series({
             group_cols[0]: "Grand Total",
@@ -163,11 +164,9 @@ if uploaded_file:
     except Exception as e:
         st.error(f"Can't calculate tables: {e}")
 
-    # Prepare base data for merging - remove grand total rows
     base1 = stats1.iloc[:-1].reset_index(drop=True)
     base2 = stats2.iloc[:-1].reset_index(drop=True)
 
-    # INNER JOIN preserve only common groups
     if group_cols:
         merged = base1.merge(base2, on=group_cols, how="inner", suffixes=(" R1", " R2"))
     else:
@@ -176,41 +175,60 @@ if uploaded_file:
         for col in base2.columns:
             merged[f"{col} R2"] = base2[col].values
 
-    # Calculate Impact %, Mix Shift Impact, Score Impact columns (no R1/R2 subcols)
+    # Compute calculated columns for Impact %, Mix Shift Impact, Score Impact
     merged["Impact %"] = merged["Weightage (Sumproduct) R2"] - merged["Weightage (Sumproduct) R1"]
     merged["Mix Shift Impact"] = (merged["TCR% R1"] / 100) * merged["Sum of SurveyCount2 R2"]
     merged["Score Impact"] = (merged["Sum of SurveyCount2 R1"] / 100) * merged["TCR% R2"]
 
-    # Create MultiIndex columns
+    # Column groups for MultiIndex
     metrics_with_subcols = [
         "Sum of SurveyCount",
         "Sum of SurveyCount2",
         "TCR%",
         "CSAT%",
-        "Weightage (Sumproduct)"
+        "Weightage (Sumproduct)",
     ]
 
-    # The impact columns do not have subcolumns
-    impact_metrics = ["Impact %", "Mix Shift Impact", "Score Impact"]
+    impact_metrics = [
+        "Impact %",
+        "Mix Shift Impact",
+        "Score Impact",
+    ]
 
-    # Build data dict for MultiIndex dataframe
     data_dict = {}
+
+    # Dimension columns with empty second level
     for col in group_cols:
         data_dict[(col, "")] = merged[col]
+
+    # Metrics with R1/R2 subcolumns
     for m in metrics_with_subcols:
         data_dict[(m, "R1")] = merged[f"{m} R1"]
         data_dict[(m, "R2")] = merged[f"{m} R2"]
+
+    # Impact metrics with single column (no subcolumn)
     for m in impact_metrics:
-        # Single column, multiindex with empty second level
         data_dict[(m, "")] = merged[m]
 
     multi_df = pd.DataFrame(data_dict)
     multi_df.columns = pd.MultiIndex.from_tuples(multi_df.columns)
 
-    st.subheader("Comparison Table with Impact Analyses")
-    st.dataframe(multi_df)
+    # Color style function for Impact % column
+    def color_impact(val):
+        if pd.isna(val):
+            return 'color: black'
+        elif val > 0:
+            return 'background-color: #d4edda; color: #155724'  # Light green
+        elif val < 0:
+            return 'background-color: #f8d7da; color: #721c24'  # Light red
+        else:
+            return 'color: black'
 
-    # Show markdown boxes for original grand totals
+    styled_multi_df = multi_df.style.applymap(color_impact, subset=pd.IndexSlice[["Impact %"], :])
+
+    st.subheader("Comparison Table with Impact Analyses")
+    st.dataframe(styled_multi_df)
+
     grand_total_1 = stats1.iloc[-1:]
     grand_total_2 = stats2.iloc[-1:]
 
@@ -234,33 +252,33 @@ if uploaded_file:
             unsafe_allow_html=True,
         )
 
-    # Show markdown boxes for impact totals (single values)
+    st.markdown("<br>", unsafe_allow_html=True)
+
     total_impact = merged["Impact %"].sum()
     total_mix_shift = merged["Mix Shift Impact"].sum()
     total_score_impact = merged["Score Impact"].sum()
 
-    st.markdown("<br>", unsafe_allow_html=True)
     col3, col4, col5 = st.columns(3)
     with col3:
+        color = "#d4edda" if total_impact > 0 else "#f8d7da" if total_impact < 0 else "white"
+        text_color = "#155724" if total_impact > 0 else "#721c24" if total_impact < 0 else "black"
         st.markdown(
-            f"<div style='background-color:grey; padding:7px; font-weight:bold;'>"
+            f"<div style='background-color:{color}; color:{text_color}; padding:7px; font-weight:bold; border:1px solid grey;'>"
             f"Total Impact %:<br>{total_impact:.4f}</div>",
             unsafe_allow_html=True,
         )
     with col4:
         st.markdown(
-            f"<div style='background-color:grey; padding:7px; font-weight:bold;'>"
+            f"<div style='background-color:lightgrey; padding:7px; font-weight:bold; border:1px solid grey;'>"
             f"Total Mix Shift Impact:<br>{total_mix_shift:.4f}</div>",
             unsafe_allow_html=True,
         )
     with col5:
         st.markdown(
-            f"<div style='background-color:grey; padding:7px; font-weight:bold;'>"
+            f"<div style='background-color:lightgrey; padding:7px; font-weight:bold; border:1px solid grey;'>"
             f"Total Score Impact:<br>{total_score_impact:.4f}</div>",
             unsafe_allow_html=True,
         )
-        
+
 else:
     st.info("Upload an Excel file to get started.")
-
-
