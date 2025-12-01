@@ -137,10 +137,19 @@ if uploaded_file:
 
             filters_active = any(val is not None for val in st.session_state.active_filters.values())
 
-            if filters_active and group_cols:
+            # Decide if table should show
+            show_table = (len(stats1) > 1 or len(stats2) > 1)
+
+            if filters_active and show_table:
                 df_R1 = stats1.copy()
                 df_R2 = stats2.copy()
-                merged = df_R1.merge(df_R2, on=group_cols, how="outer", suffixes=("_R1", "_R2"))
+                
+                if group_cols:
+                    merged = df_R1.merge(df_R2, on=group_cols, how="outer", suffixes=("_R1", "_R2"))
+                else:
+                    df_R1["dummy"] = 1
+                    df_R2["dummy"] = 1
+                    merged = df_R1.merge(df_R2, on="dummy", how="outer", suffixes=("_R1", "_R2")).drop(columns=["dummy"])
 
                 merged["Impact %"] = merged["Weightage (Sumproduct)_R2"] - merged["Weightage (Sumproduct)_R1"]
                 for c in ["TCR%", "Sum of SurveyCount2", "Weightage (Sumproduct)"]:
