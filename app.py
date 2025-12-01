@@ -162,110 +162,129 @@ if uploaded_file:
             base = group_cols.copy()
             metrics = ["Sum of SurveyCount", "Sum of SurveyCount2", "TCR%", "CSAT%", "Weightage (Sumproduct)"]
     
-            df_R1 = stats1[:-1].copy()
-            df_R2 = stats2[:-1].copy()
+            # Check if any filters are active
+            filters_active = any(val is not None for val in st.session_state.active_filters.values())
     
-            # Merge R1 and R2 as before
-            if base:
-                merged = df_R1.merge(df_R2, on=base, how="outer", suffixes=("_R1", "_R2"))
+            if filters_active:
+                # --- Full table logic as before ---
+                df_R1 = stats1[:-1].copy()
+                df_R2 = stats2[:-1].copy()
+    
+                if base:
+                    merged = df_R1.merge(df_R2, on=base, how="outer", suffixes=("_R1", "_R2"))
+                else:
+                    df_R1["dummy"] = 1
+                    df_R2["dummy"] = 1
+                    merged = df_R1.merge(df_R2, on="dummy", suffixes=("_R1", "_R2")).drop(columns=["dummy"])
+    
+                # Add extra columns
+                merged["Impact %"] = merged["Weightage (Sumproduct)_R2"] - merged["Weightage (Sumproduct)_R1"]
+    
+                w1 = df_R1.reset_index(drop=True)
+                w2 = df_R2.reset_index(drop=True)
+                for c in ["TCR%", "Sum of SurveyCount2", "Weightage (Sumproduct)"]:
+                    if c in w1.columns: w1[c] = pd.to_numeric(w1[c], errors="coerce")
+                    if c in w2.columns: w2[c] = pd.to_numeric(w2[c], errors="coerce")
+    
+                merged["Mix Shift Impact"] = ((w1["TCR%"] / 100) * w2["Sum of SurveyCount2"]).round(2)
+                merged["Score Impact"] = ((w1["Sum of SurveyCount2"] / 100) * w2["TCR%"]).round(2)
+    
+                # MultiIndex columns
+                multi_cols = []
+                for g in base: multi_cols.append((g, ""))
+                for m in metrics:
+                    multi_cols.append((m, "R1"))
+                    multi_cols.append((m, "R2"))
+                multi_cols += [("Impact %", ""), ("Mix Shift Impact", ""), ("Score Impact", "")]
+                merged = merged.reindex(columns=[*base] +
+                                                  [f"{m}_R1" for m in metrics] +
+                                                  [f"{m}_R2" for m in metrics] +
+                                                  ["Impact %", "Mix Shift Impact", "Score Impact"])
+                merged.columns = pd.MultiIndex.from_tuples(multi_cols)
+            
             else:
-                df_R1["dummy"] = 1
-                df_R2["dummy"] = 1
-                merged = df_R1.merge(df_R2, on="dummy", suffixes=("_R1", "_R2")).drop(columns=["dummy"])
-    
-            # Add the three extra columns (single values, no R1/R2 distinction)
-            # 1️⃣ Impact %
-            merged["Impact %"] = merged["Weightage (Sumproduct)_R2"] - merged["Weightage (Sumproduct)_R1"]
-    
-            # 2️⃣ Mix Shift Impact
-            w1 = df_R1.reset_index(drop=True)
-            w2 = df_R2.reset_index(drop=True)
-    
-            for c in ["TCR%", "Sum of SurveyCount2", "Weightage (Sumproduct)"]:
-                if c in w1.columns:
-                    w1[c] = pd.to_numeric(w1[c], errors="coerce")
-                if c in w2.columns:
-                    w2[c] = pd.to_numeric(w2[c], errors="coerce")
-    
-            merged["Mix Shift Impact"] = ((w1["TCR%"] / 100) * w2["Sum of SurveyCount2"]).round(2)
-            merged["Score Impact"] = ((w1["Sum of SurveyCount2"] / 100) * w2["TCR%"]).round(2)
-    
-            # Recreate MultiIndex for R1/R2 metrics
-            multi_cols = []
-            for g in base:
-                multi_cols.append((g, ""))
-            for m in metrics:
-                multi_cols.append((m, "R1"))
-                multi_cols.append((m, "R2"))
-            multi_cols += [("Impact %", ""), ("Mix Shift Impact", ""), ("Score Impact", "")]
-            merged = merged.reindex(columns=[*base] +
-                                              [f"{m}_R1" for m in metrics] +
-                                              [f"{m}_R2" for m in metrics] +
-                                              ["Impact %", "Mix Shift Impact", "Score Impact"])
-            merged.columns = pd.MultiIndex.from_tuples(multi_cols)
+                # --- First load: only show total row ---
+                total_row = pd.DataFrame([{
+                    **{g: "Grand Total" for g in base} if base else {},
+                    "Sum of SurveyCount_R1": stats1.iloc[-1]["Sum of SurveyCount"],
+                    "Sum of SurveyCount_R2": stats2.iloc[-1]["Sum of SurveyCount"],
+                    "Sum of SurveyCount2_R1": stats1.iloc[-1]["Sum of SurveyCount2"],
+                    "Sum of SurveyCount2_R2": stats2.iloc[-1]["Sum of SurveyCount2"],
+                    "TCR%_R1": stats1.iloc[-1]["TCR%"],
+                    "TCR%_R2": stats2.iloc[-1]["TCR%"],
+                    "CSAT%_R1": stats1.iloc[-1]["CSAT%"],
+                    "CSAT%_R2": stats2.iloc[-1]["CSAT%"],
+                    "Weightage (Sumproduct)_R1": stats1.iloc[-1]["Weightage (Sumproduct)"],
+                    "Weightage (Sumproduct)_R2": stats2.iloc[-1]["Weightage (Sumproduct)"],
+                    "Impact %": stats2.iloc[-1]["Weightage (Sumproduct)"] - stats1.iloc[-1]["Weightage (Sumproduct)"],
+                    "Mix Shift Impact": 0,  # show 0 as placeholder
+                    "Score Impact": 0        # show 0 as placeholder
+                }])
+                # MultiIndex columns
+                multi_cols = []
+                for g in base: multi_cols.append((g, ""))
+                for m in metrics:
+                    multi_cols.append((m, "R1"))
+                    multi_cols.append((m, "R2"))
+                multi_cols += [("Impact %", ""), ("Mix Shift Impact", ""), ("Score Impact", "")]
+                total_row = total_row.reindex(columns=[*base] +
+                                                       [f"{m}_R1" for m in metrics] +
+                                                       [f"{m}_R2" for m in metrics] +
+                                                       ["Impact %", "Mix Shift Impact", "Score Impact"])
+                total_row.columns = pd.MultiIndex.from_tuples(multi_cols)
+                merged = total_row
     
             st.write("### Comparison (R1 vs R2 with Impact & Mix/Score)")
             st.dataframe(merged, use_container_width=True)
     
-            # Existing Grand Total boxes
+            # --- Existing + New total boxes ---
             gt_r1 = stats1.iloc[-1]
             gt_r2 = stats2.iloc[-1]
             colR1, colR2 = st.columns(2)
-    
             with colR1:
                 st.markdown("### **Grand Total — R1**")
-                st.markdown(
-                    f"<div style='background-color:grey; padding:10px; font-weight:bold;'>"
-                    f"<b>Sum of SurveyCount:</b> {int(gt_r1.get('Sum of SurveyCount', 'N/A'))}<br>"
-                    f"<b>TCR %:</b> {gt_r1.get('TCR%', 0):.2f}%<br>"
-                    f"<b>CSAT %:</b> {gt_r1.get('CSAT%', 0):.2f}%<br></div>",
-                    unsafe_allow_html=True
-                )
-    
+                st.markdown(f"<div style='background-color:grey; padding:10px; font-weight:bold;'>"
+                            f"<b>Sum of SurveyCount:</b> {int(gt_r1.get('Sum of SurveyCount', 'N/A'))}<br>"
+                            f"<b>TCR %:</b> {gt_r1.get('TCR%', 0):.2f}%<br>"
+                            f"<b>CSAT %:</b> {gt_r1.get('CSAT%', 0):.2f}%<br></div>",
+                            unsafe_allow_html=True)
             with colR2:
                 st.markdown("### **Grand Total — R2**")
-                st.markdown(
-                    f"<div style='background-color:grey; padding:10px; font-weight:bold;'>"
-                    f"<b>Sum of SurveyCount:</b> {int(gt_r2.get('Sum of SurveyCount', 'N/A'))}<br>"
-                    f"<b>TCR %:</b> {gt_r2.get('TCR%', 0):.2f}%<br>"
-                    f"<b>CSAT %:</b> {gt_r2.get('CSAT%', 0):.2f}%<br></div>",
-                    unsafe_allow_html=True
-                )
+                st.markdown(f"<div style='background-color:grey; padding:10px; font-weight:bold;'>"
+                            f"<b>Sum of SurveyCount:</b> {int(gt_r2.get('Sum of SurveyCount', 'N/A'))}<br>"
+                            f"<b>TCR %:</b> {gt_r2.get('TCR%', 0):.2f}%<br>"
+                            f"<b>CSAT %:</b> {gt_r2.get('CSAT%', 0):.2f}%<br></div>",
+                            unsafe_allow_html=True)
     
-            # 🆕 New Total boxes for the 3 added columns
+            # New total boxes
             tot_impact = merged["Impact %"].sum()
             tot_mix_shift = merged["Mix Shift Impact"].sum()
             tot_score_impact = merged["Score Impact"].sum()
-    
             col3, col4, col5 = st.columns(3)
             with col3:
                 st.markdown("### **Total Impact %**")
-                st.markdown(
-                    f"<div style='background-color:grey; padding:10px; font-weight:bold;'>"
-                    f"Total Impact % : {tot_impact:.2f}<br></div>",
-                    unsafe_allow_html=True
-                )
+                st.markdown(f"<div style='background-color:grey; padding:10px; font-weight:bold;'>"
+                            f"Total Impact % : {tot_impact:.2f}<br></div>",
+                            unsafe_allow_html=True)
             with col4:
                 st.markdown("### **Total Mix Shift Impact**")
-                st.markdown(
-                    f"<div style='background-color:grey; padding:10px; font-weight:bold;'>"
-                    f"Total : {tot_mix_shift:.2f}<br></div>",
-                    unsafe_allow_html=True
-                )
+                st.markdown(f"<div style='background-color:grey; padding:10px; font-weight:bold;'>"
+                            f"Total : {tot_mix_shift:.2f}<br></div>",
+                            unsafe_allow_html=True)
             with col5:
                 st.markdown("### **Total Score Impact**")
-                st.markdown(
-                    f"<div style='background-color:grey; padding:10px; font-weight:bold;'>"
-                    f"Total : {tot_score_impact:.2f}<br></div>",
-                    unsafe_allow_html=True
-                )
+                st.markdown(f"<div style='background-color:grey; padding:10px; font-weight:bold;'>"
+                            f"Total : {tot_score_impact:.2f}<br></div>",
+                            unsafe_allow_html=True)
     
         except Exception as e:
             st.error(f"Can't render comparison table: {e}")
 
 
+
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
