@@ -301,55 +301,10 @@ if uploaded_file:
         """,
         unsafe_allow_html=True,
     )
-    
-    # ===== VISUALIZATION POPOVER (BOTTOM-LEFT FIXED) =====
-    st.markdown("""
-    <style>
-    .stButton > button {
-        position: fixed !important;
-        bottom: 20px !important;
-        left: 20px !important;
-        z-index: 9999 !important;
-        width: 50px !important;
-        height: 50px !important;
-        border-radius: 50% !important;
-        background-color: #1f77b4 !important;
-        color: white !important;
-        font-size: 18px !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    with st.popover("📊 Visualize", help="Generate charts from filtered data", width="stretch") as popover:
-        st.markdown("### 📈 Chart Generator")
-        
-        chart_type = st.selectbox("Chart Type", ["Bar", "Line"])
-        
-        # Get columns from filtered data
-        cols = filtered_df.columns.tolist()
-        numeric_cols = filtered_df.select_dtypes(include=['number']).columns.tolist()
-        
-        x_axis = st.selectbox("X-axis", options=cols)
-        y_axis = st.selectbox("Y-axis", options=numeric_cols)
-        
-        
-        if st.button("Generate", width=100):
-            fig, ax = plt.subplots(figsize=(10, 6))
-            
-            if chart_type == "Bar":
-                ax.bar(filtered_df[x_axis], filtered_df[y_axis])
-                ax.set_title(f"Bar: {y_axis} by {x_axis}")
-            else:  # Line
-                ax.plot(filtered_df[x_axis], filtered_df[y_axis], marker='o')
-                ax.set_title(f"Line: {y_axis} vs {x_axis}")
-            
-            ax.set_xlabel(x_axis)
-            ax.set_ylabel(y_axis)
-            st.pyplot(fig)
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
