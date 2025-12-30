@@ -224,7 +224,10 @@ if uploaded_file:
             multi_df[col] = multi_df[col].round(2)
         multi_df.columns = pd.MultiIndex.from_tuples(multi_df.columns)
 
+    # Robust detection of ALL "Diff" subcolumns + "Impact %" column in MultiIndex
+    diff_cols_to_style = [col for col in multi_df.columns if col[1] == "Diff"]
     impact_cols_to_style = [col for col in multi_df.columns if col[0] == "Impact %"]
+    all_cols_to_style = diff_cols_to_style + impact_cols_to_style
 
     def color_impact(val):
         if pd.isna(val):
@@ -236,10 +239,11 @@ if uploaded_file:
         else:
             return 'color: black'
     
-    if impact_cols_to_style:
-        styled_multi_df = multi_df.style.applymap(color_impact, subset=impact_cols_to_style)
+    if all_cols_to_style:
+        styled_multi_df = multi_df.style.applymap(color_impact, subset=all_cols_to_style)
     else:
-        styled_multi_df = multi_df.style
+        styled_multi_df = multi_df.style  # fallback, no styling
+
     
     st.subheader("Comparison Table 📚")
     st.dataframe(styled_multi_df)
@@ -300,6 +304,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
