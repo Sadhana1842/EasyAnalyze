@@ -1,9 +1,6 @@
 import streamlit as st
 import pandas as pd
 from collections import OrderedDict
-import streamlit as st2  # Force cache invalidation
-st.cache_data.clear()  # Clear ALL caches
-st2.cache_data.clear()  # Double clear
 
 
 st.set_page_config(page_title="HP EasyAnalyze", layout="wide", page_icon="🧊")
@@ -312,6 +309,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
