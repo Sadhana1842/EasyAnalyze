@@ -179,6 +179,8 @@ if uploaded_file:
     merged["Mix Shift Impact"] = (merged["TCR% R1"] / 100) * merged["Sum of SurveyCount2 R2"]
     merged["Score Impact"] = (merged["Sum of SurveyCount2 R1"] / 100) * merged["TCR% R2"]
 
+    #To sort by R2 sample by default (Change #1)
+    merged = merged.sort_values(by="Sum of SurveyCount2 R2", ascending=False)
     # Column groups for MultiIndex
     metrics_with_subcols = [
         "Sum of SurveyCount",
@@ -288,6 +290,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
