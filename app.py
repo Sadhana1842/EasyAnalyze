@@ -217,7 +217,7 @@ if uploaded_file:
     for m in impact_metrics:
         data_dict[(m, "")] = merged[m]
 
-
+   multi_df = pd.DataFrame(data_dict) 
    multi_df.columns = pd.MultiIndex.from_tuples(multi_df.columns)
     
     # ✨ DISPLAY-ONLY COLUMN RENAMING
@@ -326,6 +326,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
