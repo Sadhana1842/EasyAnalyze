@@ -218,8 +218,25 @@ if uploaded_file:
         data_dict[(m, "")] = merged[m]
 
 
-    multi_df = pd.DataFrame(data_dict)
-    multi_df.columns = pd.MultiIndex.from_tuples(multi_df.columns)
+   multi_df.columns = pd.MultiIndex.from_tuples(multi_df.columns)
+    
+    # ✨ DISPLAY-ONLY COLUMN RENAMING
+    level0_mapping = {
+        "Sum of SurveyCount": "Survey Sample",
+        "Sum of SurveyCount2": "Survey Sample %",
+        "TCR%": "TCR %",
+        "CSAT%": "CSAT %",
+        "Weightage (Sumproduct)": "Weightage",
+        "Impact %": "Impact %",
+        "Mix Shift Impact": "Mix Shift Impact",
+        "Score Impact": "Score Impact"
+    }
+    level1_mapping = {"R1": "Date Range 1", "R2": "Date Range 2", "Diff": "Delta"}
+    
+    new_level0 = [level0_mapping.get(col[0], col[0]) for col in multi_df.columns]
+    new_level1 = [level1_mapping.get(col[1], col[1]) for col in multi_df.columns]
+    multi_df.columns = pd.MultiIndex.from_arrays([new_level0, new_level1])
+    
 
     # Create ONE styler object and chain ALL formatting + coloring
     def format_numeric(val):
@@ -230,7 +247,7 @@ if uploaded_file:
 
     
     # Robust detection of ALL "Diff" subcolumns + "Impact %" column in MultiIndex
-    diff_cols_to_style = [col for col in multi_df.columns if col[1] == "Diff"]
+    diff_cols_to_style = [col for col in multi_df.columns if col[1] == "Delta"]
     impact_cols_to_style = [col for col in multi_df.columns if col[0] == "Impact %"]
     all_cols_to_style = diff_cols_to_style + impact_cols_to_style
     
@@ -309,6 +326,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
