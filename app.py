@@ -222,10 +222,11 @@ if uploaded_file:
     
     # Custom formatters: % columns get % symbol, others get plain decimals
     def format_percentage(val):
-        return f"{val:.2f}%" if pd.notna(val) else ""
-    
+        return f"{float(val):.2f}%" if pd.notna(val) and val is not None else ""
+
     def format_numeric(val):
-        return "{:.2f}".format(val) if pd.notna(val) else ""
+        return "{:.2f}".format(float(val)) if pd.notna(val) and val is not None else ""
+
     
     # Formatter dictionary - specific columns get % formatting
     formatter_dict = {}
@@ -317,6 +318,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
