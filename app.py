@@ -220,39 +220,27 @@ if uploaded_file:
     multi_df = pd.DataFrame(data_dict)
     multi_df.columns = pd.MultiIndex.from_tuples(multi_df.columns)
     
-    # Simple formatter that works with Styler tuples OR single values
-    def safe_format(val):
-        # Handle Styler tuple (row, col) or single value
-        if isinstance(val, tuple):
-            return ""
-        try:
-            if pd.notna(val):
-                return f"{float(val):.2f}"
-            return ""
-        except:
-            return ""
+    # ✅ CORRECT Styler formatters - take (series) as input
+    def make_pct_formatter():
+        def formatter(series):
+            return [f"{float(x):.2f}%" if pd.notna(x) else "" for x in series]
+        return formatter
     
-    def safe_format_pct(val):
-        # Handle Styler tuple (row, col) or single value
-        if isinstance(val, tuple):
-            return ""
-        try:
-            if pd.notna(val):
-                return f"{float(val):.2f}%"
-            return ""
-        except:
-            return ""
+    def make_numeric_formatter():
+        def formatter(series):
+            return [f"{float(x):.2f}" if pd.notna(x) else "" for x in series]
+        return formatter
     
-    # Formatter dictionary - specific columns get % formatting
+    # Formatter dict with proper callables
     formatter_dict = {}
     for col in multi_df.columns:
-        col_name = col[0]  # Top-level column name
+        col_name = col[0]
         if col_name in ["Sum of SurveyCount2", "TCR%", "CSAT%", "Impact %"]:
-            formatter_dict[col] = safe_format_pct
+            formatter_dict[col] = make_pct_formatter()
         else:
-            formatter_dict[col] = safe_format
+            formatter_dict[col] = make_numeric_formatter()
     
-    # Detection and color function (unchanged)
+    # Style columns detection (unchanged)
     diff_cols_to_style = [col for col in multi_df.columns if col[1] == "Diff"]
     impact_cols_to_style = [col for col in multi_df.columns if col[0] == "Impact %"]
     all_cols_to_style = diff_cols_to_style + impact_cols_to_style
@@ -267,12 +255,9 @@ if uploaded_file:
         else:
             return 'color: white'
     
-    # Chain: safe formatting + coloring
     styled_multi_df = (multi_df.style
                       .format(formatter=formatter_dict)
                       .applymap(color_impact, subset=all_cols_to_style))
-
-
 
     
     st.subheader("Comparison Table 📚")
@@ -334,6 +319,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
