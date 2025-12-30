@@ -222,7 +222,7 @@ if uploaded_file:
    multi_df = pd.DataFrame(data_dict) 
    multi_df.columns = pd.MultiIndex.from_tuples(multi_df.columns)
     
-    # ✨ DISPLAY-ONLY COLUMN RENAMING
+    # ✅ FIXED MultiIndex display names
     level0_mapping = {
         "Sum of SurveyCount": "Survey Sample",
         "Sum of SurveyCount2": "Survey Sample %",
@@ -239,7 +239,15 @@ if uploaded_file:
     new_level1 = [level1_mapping.get(col[1], col[1]) for col in multi_df.columns]
     multi_df.columns = pd.MultiIndex.from_arrays([new_level0, new_level1])
     
-
+    # CSS Override for Streamlit MultiIndex bug
+    st.markdown("""
+    <style>
+    .stDataFrame thead tr th div div[title*="Sum of SurveyCount"] { font-weight: bold !important; }
+    .stDataFrame thead tr th div div[title*="Sum of SurveyCount"]:before { content: "Survey Sample" !important; }
+    </style>
+    """, unsafe_allow_html=True)
+    
+        
     # Create ONE styler object and chain ALL formatting + coloring
     def format_numeric(val):
         try:
@@ -328,6 +336,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
