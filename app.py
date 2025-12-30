@@ -252,6 +252,7 @@ if uploaded_file:
     st.dataframe(styled_multi_df)
 
 
+
     grand_total_1 = stats1.iloc[-1:]
     grand_total_2 = stats2.iloc[-1:]
 
@@ -306,5 +307,4 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
-
 
