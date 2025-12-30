@@ -220,9 +220,21 @@ if uploaded_file:
     multi_df = pd.DataFrame(data_dict)
     multi_df.columns = pd.MultiIndex.from_tuples(multi_df.columns)
     
-    # Create ONE styler object and chain ALL formatting + coloring
+    # Custom formatters: % columns get % symbol, others get plain decimals
+    def format_percentage(val):
+        return f"{val:.2f}%" if pd.notna(val) else ""
+    
     def format_numeric(val):
         return "{:.2f}".format(val) if pd.notna(val) else ""
+    
+    # Formatter dictionary - specific columns get % formatting
+    formatter_dict = {}
+    for col in multi_df.columns:
+        col_name = col[0]  # Top-level column name
+        if col_name in ["Sum of SurveyCount2", "TCR%", "CSAT%", "Impact %"]:
+            formatter_dict[col] = format_percentage
+        else:
+            formatter_dict[col] = format_numeric
     
     # Robust detection of ALL "Diff" subcolumns + "Impact %" column in MultiIndex
     diff_cols_to_style = [col for col in multi_df.columns if col[1] == "Diff"]
@@ -239,9 +251,9 @@ if uploaded_file:
         else:
             return 'color: white'
     
-    # ✅ CHAIN: format first, THEN color on SAME object
+    # Chain: custom formatting + coloring
     styled_multi_df = (multi_df.style
-                      .format(formatter=format_numeric)
+                      .format(formatter=formatter_dict)
                       .applymap(color_impact, subset=all_cols_to_style))
 
 
@@ -305,6 +317,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
