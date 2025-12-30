@@ -237,7 +237,7 @@ if uploaded_file:
         elif val < 0:
             return 'background-color: #f8d7da; color: #721c24'
         else:
-            return 'color: black'
+            return 'color: white'
     
     if all_cols_to_style:
         styled_multi_df = multi_df.style.applymap(color_impact, subset=all_cols_to_style)
@@ -304,6 +304,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
