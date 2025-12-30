@@ -220,27 +220,11 @@ if uploaded_file:
     multi_df = pd.DataFrame(data_dict)
     multi_df.columns = pd.MultiIndex.from_tuples(multi_df.columns)
     
-    # ✅ CORRECT Styler formatters - take (series) as input
-    def make_pct_formatter():
-        def formatter(series):
-            return [f"{float(x):.2f}%" if pd.notna(x) else "" for x in series]
-        return formatter
+    # Create ONE styler object and chain ALL formatting + coloring
+    def format_numeric(val):
+        return "{:.2f}".format(val) if pd.notna(val) else ""
     
-    def make_numeric_formatter():
-        def formatter(series):
-            return [f"{float(x):.2f}" if pd.notna(x) else "" for x in series]
-        return formatter
-    
-    # Formatter dict with proper callables
-    formatter_dict = {}
-    for col in multi_df.columns:
-        col_name = col[0]
-        if col_name in ["Sum of SurveyCount2", "TCR%", "CSAT%", "Impact %"]:
-            formatter_dict[col] = make_pct_formatter()
-        else:
-            formatter_dict[col] = make_numeric_formatter()
-    
-    # Style columns detection (unchanged)
+    # Robust detection of ALL "Diff" subcolumns + "Impact %" column in MultiIndex
     diff_cols_to_style = [col for col in multi_df.columns if col[1] == "Diff"]
     impact_cols_to_style = [col for col in multi_df.columns if col[0] == "Impact %"]
     all_cols_to_style = diff_cols_to_style + impact_cols_to_style
@@ -255,19 +239,16 @@ if uploaded_file:
         else:
             return 'color: white'
     
+    # ✅ CHAIN: format first, THEN color on SAME object
     styled_multi_df = (multi_df.style
-                      .format(formatter=formatter_dict)
+                      .format(formatter=format_numeric)
                       .applymap(color_impact, subset=all_cols_to_style))
+
 
     
     st.subheader("Comparison Table 📚")
-    st.data_editor(
-        styled_multi_df,
-        disabled=True,  # Read-only, looks like dataframe
-        hide_index=False,
-        column_config={},
-        use_container_width=True
-    )
+    st.dataframe(styled_multi_df)
+
 
 
     grand_total_1 = stats1.iloc[-1:]
@@ -324,42 +305,3 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
