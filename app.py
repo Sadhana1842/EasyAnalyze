@@ -222,7 +222,11 @@ if uploaded_file:
 
     # Create ONE styler object and chain ALL formatting + coloring
     def format_numeric(val):
-        return "{:.2f}".format(val) if pd.notna(val) else ""
+        try:
+            return f"{float(val):.2f}" if pd.notna(val) else ""
+        except:
+            return ""
+
     
     # Robust detection of ALL "Diff" subcolumns + "Impact %" column in MultiIndex
     diff_cols_to_style = [col for col in multi_df.columns if col[1] == "Diff"]
@@ -304,5 +308,6 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
