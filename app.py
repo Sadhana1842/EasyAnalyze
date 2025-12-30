@@ -222,7 +222,7 @@ if uploaded_file:
     for col in multi_df.columns:
         if pd.api.types.is_numeric_dtype(multi_df[col]):
             multi_df[col] = multi_df[col].round(2)
-        multi_df.columns = pd.MultiIndex.from_tuples(multi_df.columns)
+    multi_df.columns = pd.MultiIndex.from_tuples(multi_df.columns)
 
     # Robust detection of ALL "Diff" subcolumns + "Impact %" column in MultiIndex
     diff_cols_to_style = [col for col in multi_df.columns if col[1] == "Diff"]
@@ -304,6 +304,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
