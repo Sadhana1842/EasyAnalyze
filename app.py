@@ -261,8 +261,13 @@ if uploaded_file:
 
     
     st.subheader("Comparison Table 📚")
-    st.dataframe(styled_multi_df)
-
+    st.data_editor(
+        styled_multi_df,
+        disabled=True,  # Read-only, looks like dataframe
+        hide_index=False,
+        column_config={},
+        use_container_width=True
+    )
 
 
     grand_total_1 = stats1.iloc[-1:]
@@ -319,6 +324,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
