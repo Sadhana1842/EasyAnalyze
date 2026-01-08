@@ -200,7 +200,13 @@ if uploaded_file:
         "Mix Shift Impact",
         "Score Impact",
     ]
-    
+    st.write("DEBUG: group_cols =", group_cols)
+    st.write("DEBUG: merged columns =", list(merged.columns))
+
+    # Check one example dim
+    for col in group_cols:
+        st.write(f"Sample values for '{col}' in merged:", merged[col].head(5))
+
     data_dict = {}
     
     # Dimension columns with empty second level
@@ -309,4 +315,5 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
