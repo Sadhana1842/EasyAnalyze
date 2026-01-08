@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 from collections import OrderedDict
-from pandas import IndexSlice as i_slice
 
 st.set_page_config(page_title="HP EasyAnalyze", layout="wide", page_icon="🧊")
 st.title("HP EasyAnalyze 🧊")
@@ -180,13 +179,7 @@ if uploaded_file:
     merged["Mix Shift Impact"] = (merged["TCR% R1"] / 100) * merged["Sum of SurveyCount2 R2"]
     merged["Score Impact"] = (merged["Sum of SurveyCount2 R1"] / 100) * merged["TCR% R2"]
 
-    # Per-metric Diff columns (R2 - R1) for metrics that have R1/R2
-    for m in ["Sum of SurveyCount", "Sum of SurveyCount2", "TCR%", "CSAT%", "Weightage (Sumproduct)"]:
-        merged[f"{m} Diff"] = merged[f"{m} R2"] - merged[f"{m} R1"]
-        
-    #To sort by R2 sample by default (Change #1)
-    merged = merged.sort_values(by="Sum of SurveyCount2 R2", ascending=False)
-    
+    # Column groups for MultiIndex
     metrics_with_subcols = [
         "Sum of SurveyCount",
         "Sum of SurveyCount2",
@@ -194,78 +187,51 @@ if uploaded_file:
         "CSAT%",
         "Weightage (Sumproduct)",
     ]
-    
+
     impact_metrics = [
         "Impact %",
         "Mix Shift Impact",
         "Score Impact",
     ]
-    
+
     data_dict = {}
-    
+
     # Dimension columns with empty second level
     for col in group_cols:
         data_dict[(col, "")] = merged[col]
-    
-    # Metrics with R1/R2/Diff subcolumns
+
+    # Metrics with R1/R2 subcolumns
     for m in metrics_with_subcols:
         data_dict[(m, "R1")] = merged[f"{m} R1"]
         data_dict[(m, "R2")] = merged[f"{m} R2"]
-        data_dict[(m, "Diff")] = merged[f"{m} Diff"]
-    
+
     # Impact metrics with single column (no subcolumn)
     for m in impact_metrics:
         data_dict[(m, "")] = merged[m]
 
-
     multi_df = pd.DataFrame(data_dict)
     multi_df.columns = pd.MultiIndex.from_tuples(multi_df.columns)
-    
-    # Create ONE styler object and chain ALL formatting + coloring
-    def format_numeric(val):
-        if pd.isna(val):
-            return ""
-        if isinstance(val, (int, float)):
-            return "{:.2f}".format(val)
-        return str(val)  # Strings/dims stay as-is
-    
-    # Robust detection of ALL "Diff" subcolumns + "Impact %" column in MultiIndex
-    diff_cols_to_style = [col for col in multi_df.columns if col[1] == "Diff"]
+
+    # Robust detection of the "Impact %" column in MultiIndex
     impact_cols_to_style = [col for col in multi_df.columns if col[0] == "Impact %"]
-    all_cols_to_style = diff_cols_to_style + impact_cols_to_style
     
     def color_impact(val):
         if pd.isna(val):
-            return ''
+            return 'color: black'
         elif val > 0:
-            return 'background-color: #d4edda; color: #155724'
+            return 'background-color: #d4edda; color: #155724'  # Light green
         elif val < 0:
-            return 'background-color: #f8d7da; color: #721c24'
-        return ''
+            return 'background-color: #f8d7da; color: #721c24'  # Light red
+        else:
+            return 'color: black'
     
-    # Fixed: Target numeric columns only with IndexSlice
-    numeric_metrics = ["Sum of SurveyCount", "Sum of SurveyCount2", "TCR%", "CSAT%", "Weightage (Sumproduct)"]
-    styled_multi_df = multi_df.style
-    
-    # Format numeric subcolumns
-    for m in numeric_metrics:
-        styled_multi_df = styled_multi_df.format(
-            formatter=format_numeric,
-            subset=i_slice[m, ["R1", "R2", "Diff"]]
-        )
-    # Format impact metrics
-    styled_multi_df = styled_multi_df.format(
-        formatter=format_numeric,
-        subset=i_slice[["Impact %", "Mix Shift Impact", "Score Impact"], ""]
-    )
-    
-    # Color impacts
-    styled_multi_df = styled_multi_df.applymap(color_impact, subset=all_cols_to_style)
-
+    if impact_cols_to_style:
+        styled_multi_df = multi_df.style.applymap(color_impact, subset=impact_cols_to_style)
+    else:
+        styled_multi_df = multi_df.style  # fallback, no styling
     
     st.subheader("Comparison Table 📚")
     st.dataframe(styled_multi_df)
-
 
 
     grand_total_1 = stats1.iloc[-1:]
@@ -322,3 +288,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
+
+
+Okay I want the table to display the values sorted by Sample size of Date Range 2 by default
