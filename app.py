@@ -205,7 +205,7 @@ if uploaded_file:
     
     # Dimension columns with empty second level
     for col in group_cols:
-        data_dict[(col, "")] = merged[col]
+        data_dict[(col, " ")] = merged[col]
     
     # Metrics with R1/R2/Diff subcolumns
     for m in metrics_with_subcols:
@@ -309,3 +309,4 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
