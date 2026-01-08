@@ -305,8 +305,3 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
-
-
-
-
-Still not showing only 2 places after decimal
