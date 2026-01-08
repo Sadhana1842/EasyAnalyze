@@ -217,12 +217,15 @@ if uploaded_file:
         data_dict[(m, "")] = merged[m]
 
         
-    # Round ALL numeric columns to exactly 2 decimals in DataFrame
+   # Round ALL numeric columns to exactly 2 decimals in DataFrame
     numeric_cols = multi_df.select_dtypes(include=['number']).columns
     multi_df.loc[:, numeric_cols] = multi_df.loc[:, numeric_cols].round(2)
     
     def format_numeric(val):
-        return f"{val:.2f}" if pd.notna(val) else ""
+        try:
+            return f"{float(val):.2f}" if pd.notna(val) else ""
+        except (ValueError, TypeError):
+            return str(val) if pd.notna(val) else ""
     
     # Format display for ALL columns (affects only numbers)
     styled_multi_df = multi_df.style.format(formatter=format_numeric, na_rep='')
@@ -235,15 +238,20 @@ if uploaded_file:
     def color_impact(val):
         if pd.isna(val):
             return ''
-        color = '#d4edda' if val > 0 else '#f8d7da' if val < 0 else ''
-        text_color = '#155724' if val > 0 else '#721c24' if val < 0 else 'black'
-        return f'background-color: {color}; color: {text_color}'
+        try:
+            num_val = float(val)
+            color = '#d4edda' if num_val > 0 else '#f8d7da' if num_val < 0 else ''
+            text_color = '#155724' if num_val > 0 else '#721c24' if num_val < 0 else 'black'
+            return f'background-color: {color}; color: {text_color}'
+        except:
+            return ''
     
     if all_cols_to_style:
         styled_multi_df = styled_multi_df.map(color_impact, subset=pd.IndexSlice[:, all_cols_to_style])
     
     st.subheader("Comparison Table 📚")
     st.dataframe(styled_multi_df, use_container_width=True)
+
 
 
     grand_total_1 = stats1.iloc[-1:]
@@ -300,5 +308,6 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
