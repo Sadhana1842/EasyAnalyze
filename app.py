@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 from collections import OrderedDict
 
-
 st.set_page_config(page_title="HP EasyAnalyze", layout="wide", page_icon="🧊")
 st.title("HP EasyAnalyze 🧊")
 
@@ -184,7 +183,7 @@ if uploaded_file:
     for m in ["Sum of SurveyCount", "Sum of SurveyCount2", "TCR%", "CSAT%", "Weightage (Sumproduct)"]:
         merged[f"{m} Diff"] = merged[f"{m} R2"] - merged[f"{m} R1"]
         
-    #To sort by R2 sample by default (Change #1)
+    # Sort by R2 sample by default
     merged = merged.sort_values(by="Sum of SurveyCount2 R2", ascending=False)
     
     metrics_with_subcols = [
@@ -200,29 +199,22 @@ if uploaded_file:
         "Mix Shift Impact",
         "Score Impact",
     ]
-    st.write("DEBUG: group_cols =", group_cols)
-    st.write("DEBUG: merged columns =", list(merged.columns))
-
-    # Check one example dim
-    for col in group_cols:
-        st.write(f"Sample values for '{col}' in merged:", merged[col].head(5))
-
+    
     data_dict = {}
     
-    # Dimension columns with empty second level
+    # Dimension columns with NON‑EMPTY second level → prevents blank display
     for col in group_cols:
         data_dict[(col, " ")] = merged[col]
-    
+
     # Metrics with R1/R2/Diff subcolumns
     for m in metrics_with_subcols:
         data_dict[(m, "R1")] = merged[f"{m} R1"]
         data_dict[(m, "R2")] = merged[f"{m} R2"]
         data_dict[(m, "Diff")] = merged[f"{m} Diff"]
     
-    # Impact metrics with single column (no subcolumn)
+    # Impact metrics with single column (no subcolumn) – also use non‑empty level
     for m in impact_metrics:
-        data_dict[(m, "")] = merged[m]
-
+        data_dict[(m, " ")] = merged[m]
 
     multi_df = pd.DataFrame(data_dict)
     multi_df.columns = pd.MultiIndex.from_tuples(multi_df.columns)
@@ -234,7 +226,6 @@ if uploaded_file:
         except:
             return ""
 
-    
     # Robust detection of ALL "Diff" subcolumns + "Impact %" column in MultiIndex
     diff_cols_to_style = [col for col in multi_df.columns if col[1] == "Diff"]
     impact_cols_to_style = [col for col in multi_df.columns if col[0] == "Impact %"]
@@ -250,16 +241,12 @@ if uploaded_file:
         else:
             return 'color: white'
     
-    # ✅ CHAIN: format first, THEN color on SAME object
     styled_multi_df = (multi_df.style
                       .format(formatter=format_numeric)
                       .applymap(color_impact, subset=all_cols_to_style))
 
-    
     st.subheader("Comparison Table 📚")
     st.dataframe(styled_multi_df)
-
-
 
     grand_total_1 = stats1.iloc[-1:]
     grand_total_2 = stats2.iloc[-1:]
@@ -312,8 +299,5 @@ if uploaded_file:
             unsafe_allow_html=True,
         )
 
-
 else:
     st.info("Upload an Excel file to get started.")
-
-
