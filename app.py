@@ -289,6 +289,3 @@ if uploaded_file:
 else:
     st.info("Upload an Excel file to get started.")
 
-
-
-Okay I want the table to display the values sorted by Sample size of Date Range 2 by default
