@@ -215,42 +215,33 @@ if uploaded_file:
     # Impact metrics with single column (no subcolumn)
     for m in impact_metrics:
         data_dict[(m, "")] = merged[m]
-
-
-    multi_df = pd.DataFrame(data_dict)
     
-    # Round all numeric columns to 2 decimals for display only
     multi_df = pd.DataFrame(data_dict)
     multi_df.columns = pd.MultiIndex.from_tuples(multi_df.columns)
     
-    # Format ALL columns to exactly 2 decimal places using Styler.format (fixes 12.500000 → 12.50)
+    # Create ONE styler object and chain ALL formatting + coloring
     def format_numeric(val):
         return "{:.2f}".format(val) if pd.notna(val) else ""
     
-    # Apply to ALL columns first (will only affect numeric values)
-    styled_multi_df = multi_df.style.format(format_numeric)
-
     # Robust detection of ALL "Diff" subcolumns + "Impact %" column in MultiIndex
     diff_cols_to_style = [col for col in multi_df.columns if col[1] == "Diff"]
     impact_cols_to_style = [col for col in multi_df.columns if col[0] == "Impact %"]
     all_cols_to_style = diff_cols_to_style + impact_cols_to_style
-
     
     def color_impact(val):
         if pd.isna(val):
             return 'color: black'
         elif val > 0:
-            return 'background-color: #d4edda; color: #155724'  # Light green
+            return 'background-color: #d4edda; color: #155724'
         elif val < 0:
-            return 'background-color: #f8d7da; color: #721c24'  # Light red
+            return 'background-color: #f8d7da; color: #721c24'
         else:
-            return 'color: black'
+            return 'color: white'
     
-    if all_cols_to_style:
-        styled_multi_df = multi_df.style.applymap(color_impact, subset=all_cols_to_style)
-    else:
-        styled_multi_df = multi_df.style  # fallback, no styling
-
+    # ✅ CHAIN: format first, THEN color on SAME object
+    styled_multi_df = (multi_df.style
+                      .format(formatter=format_numeric)
+                      .applymap(color_impact, subset=all_cols_to_style))
     
     st.subheader("Comparison Table 📚")
     st.dataframe(styled_multi_df)
@@ -310,6 +301,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
