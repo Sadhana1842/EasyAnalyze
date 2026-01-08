@@ -179,7 +179,6 @@ if uploaded_file:
     merged["Mix Shift Impact"] = (merged["TCR% R1"] / 100) * merged["Sum of SurveyCount2 R2"]
     merged["Score Impact"] = (merged["Sum of SurveyCount2 R1"] / 100) * merged["TCR% R2"]
 
-    # Column groups for MultiIndex
     metrics_with_subcols = [
         "Sum of SurveyCount",
         "Sum of SurveyCount2",
@@ -187,27 +186,29 @@ if uploaded_file:
         "CSAT%",
         "Weightage (Sumproduct)",
     ]
-
+    
     impact_metrics = [
         "Impact %",
         "Mix Shift Impact",
         "Score Impact",
     ]
-
+    
     data_dict = {}
-
+    
     # Dimension columns with empty second level
     for col in group_cols:
         data_dict[(col, "")] = merged[col]
-
-    # Metrics with R1/R2 subcolumns
+    
+    # Metrics with R1/R2/Diff subcolumns
     for m in metrics_with_subcols:
         data_dict[(m, "R1")] = merged[f"{m} R1"]
         data_dict[(m, "R2")] = merged[f"{m} R2"]
-
+        data_dict[(m, "Diff")] = merged[f"{m} Diff"]
+    
     # Impact metrics with single column (no subcolumn)
     for m in impact_metrics:
         data_dict[(m, "")] = merged[m]
+
 
     multi_df = pd.DataFrame(data_dict)
     multi_df.columns = pd.MultiIndex.from_tuples(multi_df.columns)
@@ -288,4 +289,5 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
