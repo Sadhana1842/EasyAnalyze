@@ -216,13 +216,6 @@ if uploaded_file:
     for m in impact_metrics:
         data_dict[(m, "")] = merged[m]
 
-
-    multi_df = pd.DataFrame(data_dict)
-    multi_df.columns = pd.MultiIndex.from_tuples(multi_df.columns)
-    
-    # Round all numeric columns to 2 decimals for display only
-    def format_numeric(val):
-        return "{:.2f}".format(val) if pd.notna(val) else ""
         
     # Round ALL numeric columns to exactly 2 decimals in DataFrame
     numeric_cols = multi_df.select_dtypes(include=['number']).columns
@@ -307,4 +300,5 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
