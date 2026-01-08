@@ -224,33 +224,33 @@ if uploaded_file:
     def format_numeric(val):
         return "{:.2f}".format(val) if pd.notna(val) else ""
         
-     # Apply to ALL columns first (will only affect numeric values)
-    styled_multi_df = multi_df.style.format(format_numeric)   
+    # Round ALL numeric columns to exactly 2 decimals in DataFrame
+    numeric_cols = multi_df.select_dtypes(include=['number']).columns
+    multi_df.loc[:, numeric_cols] = multi_df.loc[:, numeric_cols].round(2)
     
-    # Robust detection of ALL "Diff" subcolumns + "Impact %" column in MultiIndex
+    def format_numeric(val):
+        return f"{val:.2f}" if pd.notna(val) else ""
+    
+    # Format display for ALL columns (affects only numbers)
+    styled_multi_df = multi_df.style.format(formatter=format_numeric, na_rep='')
+    
+    # Color only Diff/Impact columns
     diff_cols_to_style = [col for col in multi_df.columns if col[1] == "Diff"]
     impact_cols_to_style = [col for col in multi_df.columns if col[0] == "Impact %"]
     all_cols_to_style = diff_cols_to_style + impact_cols_to_style
-
+    
     def color_impact(val):
         if pd.isna(val):
-            return 'color: black'
-        elif val > 0:
-            return 'background-color: #d4edda; color: #155724'
-        elif val < 0:
-            return 'background-color: #f8d7da; color: #721c24'
-        else:
-            return 'color: white'
+            return ''
+        color = '#d4edda' if val > 0 else '#f8d7da' if val < 0 else ''
+        text_color = '#155724' if val > 0 else '#721c24' if val < 0 else 'black'
+        return f'background-color: {color}; color: {text_color}'
     
     if all_cols_to_style:
-        styled_multi_df = multi_df.style.applymap(color_impact, subset=all_cols_to_style)
-    else:
-        styled_multi_df = multi_df.style  # fallback, no styling
-
+        styled_multi_df = styled_multi_df.map(color_impact, subset=pd.IndexSlice[:, all_cols_to_style])
     
     st.subheader("Comparison Table 📚")
-    st.dataframe(styled_multi_df)
-
+    st.dataframe(styled_multi_df, use_container_width=True)
 
 
     grand_total_1 = stats1.iloc[-1:]
@@ -307,3 +307,4 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
