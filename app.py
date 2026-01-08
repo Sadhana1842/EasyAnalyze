@@ -220,11 +220,15 @@ if uploaded_file:
     multi_df = pd.DataFrame(data_dict)
     
     # Round all numeric columns to 2 decimals for display only
-    for col in multi_df.columns:
-        if pd.api.types.is_numeric_dtype(multi_df[col]):
-            multi_df[col] = multi_df[col].round(2)
-            
+    multi_df = pd.DataFrame(data_dict)
     multi_df.columns = pd.MultiIndex.from_tuples(multi_df.columns)
+    
+    # Format ALL columns to exactly 2 decimal places using Styler.format (fixes 12.500000 → 12.50)
+    def format_numeric(val):
+        return "{:.2f}".format(val) if pd.notna(val) else ""
+    
+    # Apply to ALL columns first (will only affect numeric values)
+    styled_multi_df = multi_df.style.format(format_numeric)
 
     # Robust detection of ALL "Diff" subcolumns + "Impact %" column in MultiIndex
     diff_cols_to_style = [col for col in multi_df.columns if col[1] == "Diff"]
@@ -306,6 +310,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
