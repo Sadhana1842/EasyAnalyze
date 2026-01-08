@@ -183,7 +183,7 @@ if uploaded_file:
     for m in ["Sum of SurveyCount", "Sum of SurveyCount2", "TCR%", "CSAT%", "Weightage (Sumproduct)"]:
         merged[f"{m} Diff"] = merged[f"{m} R2"] - merged[f"{m} R1"]
         
-    #To sort by R2 sample by default (Change #1)
+    #To sort by R2 sample by default
     merged = merged.sort_values(by="Sum of SurveyCount2 R2", ascending=False)
     
     metrics_with_subcols = [
@@ -216,43 +216,44 @@ if uploaded_file:
     for m in impact_metrics:
         data_dict[(m, "")] = merged[m]
 
-        
-   # Round ALL numeric columns to exactly 2 decimals in DataFrame
+    multi_df = pd.DataFrame(data_dict)
+    multi_df.columns = pd.MultiIndex.from_tuples(multi_df.columns)
+    
+    # === FIXED STYLING: 2 decimals + colors ===
+    # Round numeric columns to 2 decimals
     numeric_cols = multi_df.select_dtypes(include=['number']).columns
     multi_df.loc[:, numeric_cols] = multi_df.loc[:, numeric_cols].round(2)
-    
+
     def format_numeric(val):
         try:
-            return f"{float(val):.2f}" if pd.notna(val) else ""
+            return f"{float(val):.2f}"
         except (ValueError, TypeError):
-            return str(val) if pd.notna(val) else ""
-    
-    # Format display for ALL columns (affects only numbers)
+            return str(val)
+
     styled_multi_df = multi_df.style.format(formatter=format_numeric, na_rep='')
-    
-    # Color only Diff/Impact columns
-    diff_cols_to_style = [col for col in multi_df.columns if col[1] == "Diff"]
-    impact_cols_to_style = [col for col in multi_df.columns if col[0] == "Impact %"]
-    all_cols_to_style = diff_cols_to_style + impact_cols_to_style
-    
+
+    # Color Diff/Impact columns
+    diff_cols = [col for col in multi_df.columns if col[1] == "Diff"]
+    impact_cols = [col for col in multi_df.columns if col[0] == "Impact %"]
+    style_cols = diff_cols + impact_cols
+
     def color_impact(val):
-        if pd.isna(val):
-            return ''
         try:
             num_val = float(val)
-            color = '#d4edda' if num_val > 0 else '#f8d7da' if num_val < 0 else ''
-            text_color = '#155724' if num_val > 0 else '#721c24' if num_val < 0 else 'black'
-            return f'background-color: {color}; color: {text_color}'
+            if num_val > 0:
+                return 'background-color: #d4edda; color: #155724'
+            elif num_val < 0:
+                return 'background-color: #f8d7da; color: #721c24'
         except:
-            return ''
-    
-    if all_cols_to_style:
-        styled_multi_df = styled_multi_df.map(color_impact, subset=pd.IndexSlice[:, all_cols_to_style])
-    
+            pass
+        return ''
+
+    if style_cols:
+        styled_multi_df = styled_multi_df.map(color_impact, subset=pd.IndexSlice[:, style_cols])
+
     st.subheader("Comparison Table 📚")
     st.dataframe(styled_multi_df, use_container_width=True)
-
-
+    # === END STYLING ===
 
     grand_total_1 = stats1.iloc[-1:]
     grand_total_2 = stats2.iloc[-1:]
@@ -305,9 +306,5 @@ if uploaded_file:
             unsafe_allow_html=True,
         )
 
-
 else:
     st.info("Upload an Excel file to get started.")
-
-
-
