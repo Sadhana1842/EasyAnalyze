@@ -11,7 +11,6 @@ if uploaded_file:
     df = pd.read_excel(uploaded_file)
     df.columns = df.columns.str.strip()
     
-    # Ensure recordeddate is datetime
     if not pd.api.types.is_datetime64_any_dtype(df["recordeddate"]):
         df["recordeddate"] = pd.to_datetime(df["recordeddate"], errors="coerce")
     
@@ -47,7 +46,6 @@ if uploaded_file:
     if "active_filters" not in st.session_state:
         st.session_state.active_filters = OrderedDict()
 
-    # Dimension buttons main area
     st.markdown("### Available Dimensions 🔍")
     cols = st.columns(3)
     for i, col in enumerate(available_dims):
@@ -56,7 +54,6 @@ if uploaded_file:
                 st.session_state.active_filters[col] = None
                 st.rerun()
 
-    # Active filters sidebar
     if st.session_state.active_filters:
         st.sidebar.markdown("### Active Filters 🔍")
         for dim in list(st.session_state.active_filters.keys()):
@@ -88,16 +85,13 @@ if uploaded_file:
             if remove_col.button(f"❌ Remove {dim}", key=f"remove_{dim}"):
                 del st.session_state.active_filters[dim]
                 st.rerun()
-
     else:
         st.sidebar.info("No dimensions selected. Click a dimension above to add it as a filter.")
 
-    # Apply active filters to dataframe
     filtered_df = df.copy()
     for dim, val in st.session_state.active_filters.items():
         if val is not None:
             filtered_df = filtered_df[filtered_df[dim].astype(str) == str(val)]
-
     # ---------------- FILTERING LOGIC END ----------------
     
     def calc_group_stats(dataframe, start_date, end_date, group_cols):
@@ -137,31 +131,27 @@ if uploaded_file:
             lambda r: (r["Sum of CSAT_Num"]*100.0/r["Sum of SurveyCount"]) if r["Sum of SurveyCount"] else 0.0, axis=1)
         grouped["Weightage (Sumproduct)"] = ((grouped["Sum of SurveyCount2"]/100)*grouped["TCR%"]).round(4)
 
+        # Total row already included here
         total_row = pd.Series({
             group_cols[0]: "Grand Total",
             "Sum of SurveyCount": grouped["Sum of SurveyCount"].sum(),
             "Sum of SurveyCount2": grouped["Sum of SurveyCount2"].sum(),
-            "TCR%": (grouped["Sum of TCR_Yes"].sum() *100.0 / grouped["Sum of SurveyCount"].sum()) if grouped["Sum of SurveyCount"].sum() else 0.0,
+            "TCR%": (grouped["Sum of TCR_Yes"].sum()*100.0 / grouped["Sum of SurveyCount"].sum()) if grouped["Sum of SurveyCount"].sum() else 0.0,
             "CSAT%": (grouped["Sum of CSAT_Num"].sum()*100.0 / grouped["Sum of SurveyCount"].sum()) if grouped["Sum of SurveyCount"].sum() else 0.0,
         })
 
-        # Only append total row when grouping exists
-        if not (len(group_cols) == 1 and group_cols[0] == "All Data"):
-            grouped = pd.concat([grouped, total_row.to_frame().T], ignore_index=True)
-
+        grouped = grouped[group_cols + ["Sum of SurveyCount", "Sum of SurveyCount2", "TCR%", "CSAT%", "Weightage (Sumproduct)"]]
+        grouped = pd.concat([grouped, total_row.to_frame().T], ignore_index=True)
         return grouped
 
-    try:
-        active_keys = list(st.session_state.active_filters.keys())
-        group_cols = active_keys if active_keys else []
+    active_keys = list(st.session_state.active_filters.keys())
+    group_cols = active_keys if active_keys else []
 
-        stats1 = calc_group_stats(filtered_df, date_range1[0], date_range1[1], group_cols)
-        stats2 = calc_group_stats(filtered_df, date_range2[0], date_range2[1], group_cols)
-    except Exception as e:
-        st.error(f"Can't calculate tables: {e}")
+    stats1 = calc_group_stats(filtered_df, date_range1[0], date_range1[1], group_cols)
+    stats2 = calc_group_stats(filtered_df, date_range2[0], date_range2[1], group_cols)
 
-    base1 = stats1.iloc[:-1].reset_index(drop=True) if group_cols else stats1.copy()
-    base2 = stats2.iloc[:-1].reset_index(drop=True) if group_cols else stats2.copy()
+    base1 = stats1.iloc[:-1].reset_index(drop=True)
+    base2 = stats2.iloc[:-1].reset_index(drop=True)
 
     if group_cols:
         merged = base1.merge(base2, on=group_cols, how="inner", suffixes=(" R1", " R2"))
@@ -179,18 +169,10 @@ if uploaded_file:
         
     merged = merged.sort_values(by="Sum of SurveyCount2 R2", ascending=False)
     
-    metrics_with_subcols = [
-        "Sum of SurveyCount",
-        "Sum of SurveyCount2",
-        "TCR%",
-        "CSAT%",
-        "Weightage (Sumproduct)",
-    ]
-    
+    metrics_with_subcols = ["Sum of SurveyCount", "Sum of SurveyCount2", "TCR%", "CSAT%", "Weightage (Sumproduct)"]
     impact_metrics = ["Mix Shift Impact", "Score Impact"]
     
     data_dict = {}
-    
     for col in group_cols:
         data_dict[(col, "")] = merged[col]
     
@@ -205,14 +187,14 @@ if uploaded_file:
     multi_df = pd.DataFrame(data_dict)
     multi_df.columns = pd.MultiIndex.from_tuples(multi_df.columns)
 
-    # ------------------- Styling -------------------
+    # Formatter with percentages for TCR, CSAT, and Sum of SurveyCount2
     def format_numeric(val, col=None):
         try:
             num = float(val)
-            if col and "%" in col[0]:
+            if col and any(x in col[0] for x in ["%", "SurveyCount2"]):
                 return f"{num:.2f}%"
             return f"{num:.2f}"
-        except (ValueError, TypeError):
+        except:
             return str(val)
 
     styled_multi_df = multi_df.style.format(
@@ -236,49 +218,36 @@ if uploaded_file:
     if diff_cols:
         styled_multi_df = styled_multi_df.map(color_impact, subset=pd.IndexSlice[:, diff_cols])
 
-    # ------------------- Grand Total row for table -------------------
-    # Always create a total row for the multi-index table
-    if group_cols:
-        total_label = "Grand Total"
-        total_key = (group_cols[0], "")
-    else:
-        total_label = "Grand Total"
-        total_key = ("", "")
+    # ✅ Only add manual total row if filters exist
+    if len(group_cols) > 0:
+        total_dict = {(group_cols[0], ""): "Grand Total"}
+        for m in metrics_with_subcols:
+            total_dict[(m, "R1")] = stats1.iloc[-1][m]
+            total_dict[(m, "R2")] = stats2.iloc[-1][m]
+            total_dict[(m, "Diff")] = stats2.iloc[-1][m] - stats1.iloc[-1][m]
+        for m in impact_metrics:
+            total_dict[(m, "")] = merged[m].sum()
 
-    total_dict = {total_key: total_label}
+        total_df = pd.DataFrame([total_dict])
+        total_df.columns = pd.MultiIndex.from_tuples(total_dict.keys())
 
-    for m in metrics_with_subcols:
-        total_dict[(m, "R1")] = stats1.iloc[-1][m]
-        total_dict[(m, "R2")] = stats2.iloc[-1][m]
-        total_dict[(m, "Diff")] = stats2.iloc[-1][m] - stats1.iloc[-1][m]
+        display_df = pd.concat([multi_df, total_df], ignore_index=True)
+        styled_multi_df = display_df.style.format(
+            {col: (lambda v, c=col: format_numeric(v, c)) for col in display_df.columns},
+            na_rep=''
+        ).map(color_impact, subset=pd.IndexSlice[:, diff_cols])
 
-    for m in impact_metrics:
-        total_dict[(m, "")] = merged[m].sum() if not merged.empty else 0.0
+        def highlight_total(row):
+            if row.name == len(multi_df):
+                return ['font-weight: bold; background-color: #f9f9f9; color: black'] * len(row)
+            return [''] * len(row)
 
-    total_df = pd.DataFrame([total_dict])
-    total_df.columns = pd.MultiIndex.from_tuples(total_dict.keys())
-
-    display_df = pd.concat([multi_df, total_df], ignore_index=True)
-
-    styled_multi_df = display_df.style.format(
-        {col: (lambda v, c=col: format_numeric(v, c)) for col in display_df.columns},
-        na_rep=''
-    )
-
-    if diff_cols:
-        styled_multi_df = styled_multi_df.map(color_impact, subset=pd.IndexSlice[:, diff_cols])
-
-    def highlight_total(row):
-        if row.name == len(display_df) - 1:
-            return ['font-weight: bold; background-color: #f9f9f9; color: black'] * len(row)
-        return [''] * len(row)
-
-    styled_multi_df = styled_multi_df.apply(highlight_total, axis=1)
+        styled_multi_df = styled_multi_df.apply(highlight_total, axis=1)
 
     st.subheader("Comparison Table 📚")
     st.dataframe(styled_multi_df, use_container_width=True)
 
-    # ------------------- Cards below -------------------
+    # ✅ Total cards below remain unchanged
     grand_total_1 = stats1.iloc[-1:]
     grand_total_2 = stats2.iloc[-1:]
 
@@ -302,8 +271,6 @@ if uploaded_file:
             unsafe_allow_html=True,
         )
 
-    st.markdown("<br>", unsafe_allow_html=True)
-
     total_mix_shift = merged["Mix Shift Impact"].sum()
     total_score_impact = merged["Score Impact"].sum()
 
@@ -323,4 +290,3 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
-
