@@ -237,28 +237,28 @@ if uploaded_file:
             na_rep=''
         ).map(color_impact, subset=pd.IndexSlice[:, diff_cols])
 
-       def highlight_total(row):
-        styles = [''] * len(row)
-    
-        # Identify total row
-        if row.name == len(multi_df):
-    
-            for i, col in enumerate(row.index):
-                # Apply red/green ONLY for Diff columns
-                if 'Diff' in col:
-                    val = row[col]
-                    if pd.notna(val):
-                        if val > 0:
-                            styles[i] = 'font-weight: bold; background-color: #f9f9f9; color: green'
-                        elif val < 0:
-                            styles[i] = 'font-weight: bold; background-color: #f9f9f9; color: red'
-                        else:
-                            styles[i] = 'font-weight: bold; background-color: #f9f9f9; color: black'
-                else:
-                    # Non-diff columns in total row
-                    styles[i] = 'font-weight: bold; background-color: #f9f9f9; color: black'
-    
-        return styles
+        def highlight_total(row):
+            styles = [''] * len(row)
+        
+            # Identify total row
+            if row.name == len(multi_df):
+        
+                for i, col in enumerate(row.index):
+                    # Apply red/green ONLY for Diff columns
+                    if 'Diff' in col:
+                        val = row[col]
+                        if pd.notna(val):
+                            if val > 0:
+                                styles[i] = 'font-weight: bold; background-color: #f9f9f9; color: green'
+                            elif val < 0:
+                                styles[i] = 'font-weight: bold; background-color: #f9f9f9; color: red'
+                            else:
+                                styles[i] = 'font-weight: bold; background-color: #f9f9f9; color: black'
+                    else:
+                        # Non-diff columns in total row
+                        styles[i] = 'font-weight: bold; background-color: #f9f9f9; color: black'
+        
+            return styles
 
 
         styled_multi_df = styled_multi_df.apply(highlight_total, axis=1)
@@ -294,3 +294,6 @@ else:
     st.info("Upload an Excel file to get started.")
 
 
+
+
+just tell me where the colour coding for the total row is
