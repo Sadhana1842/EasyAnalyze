@@ -141,8 +141,8 @@ if uploaded_file:
             group_cols[0]: "Grand Total",
             "Sum of SurveyCount": grouped["Sum of SurveyCount"].sum(),
             "Sum of SurveyCount2": grouped["Sum of SurveyCount2"].sum(),
-            "TCR%": (grouped["Sum of TCR_Yes"].sum() / grouped["Sum of SurveyCount"].sum()) if grouped["Sum of SurveyCount"].sum() else 0.0,
-            "CSAT%": (grouped["Sum of CSAT_Num"].sum() / grouped["Sum of SurveyCount"].sum()) if grouped["Sum of SurveyCount"].sum() else 0.0,
+            "TCR%": (grouped["Sum of TCR_Yes"].sum() *100.0 / grouped["Sum of SurveyCount"].sum()) if grouped["Sum of SurveyCount"].sum() else 0.0,
+            "CSAT%": (grouped["Sum of CSAT_Num"].sum()*100.0 / grouped["Sum of SurveyCount"].sum()) if grouped["Sum of SurveyCount"].sum() else 0.0,
         })
 
         grouped = grouped[group_cols + ["Sum of SurveyCount", "Sum of SurveyCount2", "TCR%", "CSAT%", "Weightage (Sumproduct)"]]
@@ -324,3 +324,4 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
