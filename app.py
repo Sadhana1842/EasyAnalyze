@@ -175,7 +175,7 @@ if uploaded_file:
             merged[f"{col} R2"] = base2[col].values
 
     # Compute calculated columns for Impact %, Mix Shift Impact, Score Impact
-    merged["Impact %"] = merged["Weightage (Sumproduct) R2"] - merged["Weightage (Sumproduct) R1"]
+    #merged["Impact %"] = merged["Weightage (Sumproduct) R2"] - merged["Weightage (Sumproduct) R1"]
     merged["Mix Shift Impact"] = (merged["TCR% R1"] / 100) * merged["Sum of SurveyCount2 R2"]
     merged["Score Impact"] = (merged["Sum of SurveyCount2 R1"] / 100) * merged["TCR% R2"]
 
@@ -195,7 +195,6 @@ if uploaded_file:
     ]
     
     impact_metrics = [
-        "Impact %",
         "Mix Shift Impact",
         "Score Impact",
     ]
@@ -234,8 +233,8 @@ if uploaded_file:
 
     # Color Diff/Impact columns
     diff_cols = [col for col in multi_df.columns if col[1] == "Diff"]
-    impact_cols = [col for col in multi_df.columns if col[0] == "Impact %"]
-    style_cols = diff_cols + impact_cols
+    #impact_cols = [col for col in multi_df.columns if col[0] == "Impact %"]
+    style_cols = diff_cols
 
     def color_impact(val):
         try:
@@ -280,20 +279,13 @@ if uploaded_file:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    total_impact = merged["Impact %"].sum()
+    #total_impact = merged["Impact %"].sum()
     total_mix_shift = merged["Mix Shift Impact"].sum()
     total_score_impact = merged["Score Impact"].sum()
 
     col3, col4, col5 = st.columns(3)
+
     with col3:
-        color = "#d4edda" if total_impact > 0 else "#f8d7da" if total_impact < 0 else "white"
-        text_color = "#155724" if total_impact > 0 else "#721c24" if total_impact < 0 else "black"
-        st.markdown(
-            f"<div style='background-color:{color}; color:{text_color}; padding:7px; font-weight:bold; border:1px solid grey;'>"
-            f"Total Impact %:<br>{total_impact:.4f}</div>",
-            unsafe_allow_html=True,
-        )
-    with col4:
         st.markdown(
             f"<div style='background-color:grey; padding:7px; font-weight:bold; border:1px solid grey;'>"
             f"Total Mix Shift Impact:<br>{total_mix_shift:.4f}</div>",
@@ -308,3 +300,4 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
