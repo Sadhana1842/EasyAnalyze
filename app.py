@@ -294,6 +294,3 @@ else:
     st.info("Upload an Excel file to get started.")
 
 
-
-
-just tell me where the colour coding for the total row is
