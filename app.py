@@ -210,9 +210,8 @@ if uploaded_file:
     def format_numeric(val, col=None):
         try:
             num = float(val)
-            if col and "%" in col[0]:
-                return f"{num:.2f}%"
-            return f"{num:.2f}"
+            if col and ("%" in col[0] or col[0] == "Sum of SurveyCount2"):
+                return f"{num:.2f}"
         except (ValueError, TypeError):
             return str(val)
 
@@ -336,6 +335,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
