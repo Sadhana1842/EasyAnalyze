@@ -280,12 +280,11 @@ if uploaded_file:
     if style_cols:
         styled_multi_df = styled_multi_df.map(color_impact, subset=pd.IndexSlice[:, style_cols])
     
-    # Bold grey Grand Total row
     def highlight_total(row):
         if row.name == len(multi_df):
-            return ['font-weight: bold; background-color: #f0f0f0'] * len(row)
+            return ['font-weight: bold; background-color: #f9f9f9; color: black'] * len(row)
         return [''] * len(row)
-    
+
     styled_multi_df = styled_multi_df.apply(highlight_total, axis=1)
     
     st.subheader("Comparison Table 📚")
@@ -339,5 +338,6 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
