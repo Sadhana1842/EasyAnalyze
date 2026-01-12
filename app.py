@@ -160,8 +160,8 @@ if uploaded_file:
     except Exception as e:
         st.error(f"Can't calculate tables: {e}")
 
-    base1 = stats1.iloc[:-1].reset_index(drop=True)
-    base2 = stats2.iloc[:-1].reset_index(drop=True)
+    base1 = stats1.iloc[:-1].reset_index(drop=True) if group_cols else stats1.copy()
+    base2 = stats2.iloc[:-1].reset_index(drop=True) if group_cols else stats2.copy()
 
     if group_cols:
         merged = base1.merge(base2, on=group_cols, how="inner", suffixes=(" R1", " R2"))
@@ -337,6 +337,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
