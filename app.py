@@ -289,8 +289,8 @@ if uploaded_file:
             f"<div style='background-color:grey; padding:7px; font-weight:bold;'>"
             f"Grand Total - Range 1:<br>"
             f"SurveyCount: {grand_total_1['Sum of SurveyCount'].values[0]}<br>"
-            f"TCR%: {grand_total_1['TCR%'].values[0]:.2%}<br>"
-            f"CSAT%: {grand_total_1['CSAT%'].values[0]:.2%}</div>",
+            f"TCR%: {grand_total_1['TCR%'].values[0]} %<br>"
+            f"CSAT%: {grand_total_1['CSAT%'].values[0]} %</div>",
             unsafe_allow_html=True,
         )
     with col2:
@@ -298,8 +298,8 @@ if uploaded_file:
             f"<div style='background-color:grey; padding:10px; font-weight:bold;'>"
             f"Grand Total - Range 2:<br>"
             f"SurveyCount: {grand_total_2['Sum of SurveyCount'].values[0]}<br>"
-            f"TCR%: {grand_total_2['TCR%'].values[0]:.2%}<br>"
-            f"CSAT%: {grand_total_2['CSAT%'].values[0]:.2%}</div>",
+            f"TCR%: {grand_total_2['TCR%'].values[0]:} %<br>"
+            f"CSAT%: {grand_total_2['CSAT%'].values[0]:} %</div>",
             unsafe_allow_html=True,
         )
 
@@ -324,4 +324,5 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
