@@ -229,13 +229,13 @@ if uploaded_file:
         except (ValueError, TypeError):
             return str(val)
 
+    # Style base table (2 decimals)
     styled_multi_df = multi_df.style.format(formatter=format_numeric, na_rep='')
-
-    # Color Diff/Impact columns
+    
+    # Color only Diff columns (no Impact %)
     diff_cols = [col for col in multi_df.columns if col[1] == "Diff"]
-    #impact_cols = [col for col in multi_df.columns if col[0] == "Impact %"]
     style_cols = diff_cols
-
+    
     def color_impact(val):
         try:
             num_val = float(val)
@@ -246,12 +246,51 @@ if uploaded_file:
         except:
             pass
         return ''
-
+    
     if style_cols:
         styled_multi_df = styled_multi_df.map(color_impact, subset=pd.IndexSlice[:, style_cols])
-
+    
+    # Build Grand Total row for table
+    total_dict = {}
+    if group_cols:
+        total_dict[(group_cols[0], "")] = "Grand Total"
+    else:
+        total_dict[("All Data", "")] = "Grand Total"
+    
+    # R1/R2/Diff from stats grand totals
+    for m in metrics_with_subcols:
+        total_dict[(m, "R1")] = stats1.iloc[-1][m]
+        total_dict[(m, "R2")] = stats2.iloc[-1][m]
+        total_dict[(m, "Diff")] = stats2.iloc[-1][m] - stats1.iloc[-1][m]
+    
+    # Mix Shift Impact & Score Impact totals (if still present)
+    if 'Mix Shift Impact' in merged.columns:
+        total_dict[("Mix Shift Impact", "")] = merged["Mix Shift Impact"].sum()
+    if 'Score Impact' in merged.columns:
+        total_dict[("Score Impact", "")] = merged["Score Impact"].sum()
+    
+    total_df = pd.DataFrame([total_dict])
+    total_df.columns = pd.MultiIndex.from_tuples(total_dict.keys())
+    total_df = total_df.round(2)
+    
+    # Combine + style
+    display_df = pd.concat([multi_df, total_df], ignore_index=True)
+    styled_multi_df = display_df.style.format(formatter=format_numeric, na_rep='')
+    
+    if style_cols:
+        styled_multi_df = styled_multi_df.map(color_impact, subset=pd.IndexSlice[:, style_cols])
+    
+    # Bold grey Grand Total row
+    def highlight_total(row):
+        if row.name == len(multi_df):
+            return ['font-weight: bold; background-color: #f0f0f0'] * len(row)
+        return [''] * len(row)
+    
+    styled_multi_df = styled_multi_df.apply(highlight_total, axis=1)
+    
     st.subheader("Comparison Table 📚")
     st.dataframe(styled_multi_df, use_container_width=True)
+
     # === END STYLING ===
 
     grand_total_1 = stats1.iloc[-1:]
@@ -300,4 +339,5 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
