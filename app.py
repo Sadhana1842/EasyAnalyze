@@ -249,9 +249,9 @@ if uploaded_file:
                         val = row[col]
                         if pd.notna(val):
                             if val > 0:
-                                styles[i] = 'font-weight: bold; background-color: #f9f9f9; color: green'
+                                styles[i] = 'font-weight: bold; background-color: green; color: black'
                             elif val < 0:
-                                styles[i] = 'font-weight: bold; background-color: #f9f9f9; color: red'
+                                styles[i] = 'font-weight: bold; background-color: red; color: black'
                             else:
                                 styles[i] = 'font-weight: bold; background-color: #f9f9f9; color: black'
                     else:
@@ -292,5 +292,6 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
