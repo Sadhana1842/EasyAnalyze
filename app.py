@@ -250,12 +250,46 @@ if uploaded_file:
     if style_cols:
         styled_multi_df = styled_multi_df.map(color_impact, subset=pd.IndexSlice[:, style_cols])
     
-    # Build Grand Total row for table
-    total_dict = {}
-    if group_cols:
-        total_dict[(group_cols[0], "")] = "Grand Total"
+    # Build Grand Total row ONLY if filters applied
+    if len(group_cols) > 0:
+        total_dict = {(group_cols[0], ""): "Grand Total"}
+        
+        # R1/R2/Diff from stats grand totals
+        for m in metrics_with_subcols:
+            total_dict[(m, "R1")] = stats1.iloc[-1][m]
+            total_dict[(m, "R2")] = stats2.iloc[-1][m]
+            total_dict[(m, "Diff")] = stats2.iloc[-1][m] - stats1.iloc[-1][m]
+    
+        # Mix Shift Impact & Score Impact totals
+        if 'Mix Shift Impact' in merged.columns:
+            total_dict[("Mix Shift Impact", "")] = merged["Mix Shift Impact"].sum()
+        if 'Score Impact' in merged.columns:
+            total_dict[("Score Impact", "")] = merged["Score Impact"].sum()
+    
+        total_df = pd.DataFrame([total_dict])
+        total_df.columns = pd.MultiIndex.from_tuples(total_dict.keys())
+        total_df = total_df.round(2)
+        
+        # Combine main table + total row
+        display_df = pd.concat([multi_df, total_df], ignore_index=True)
+        styled_multi_df = display_df.style.format(formatter=format_numeric, na_rep='')
+        
+        if style_cols:
+            styled_multi_df = styled_multi_df.map(color_impact, subset=pd.IndexSlice[:, style_cols])
+        
+        # Bold grey Grand Total row (only last row)
+        def highlight_total(row):
+            if row.name == len(multi_df):
+                return ['font-weight: bold; background-color: #f9f9f9; color: black'] * len(row)
+            return [''] * len(row)
+        
+        styled_multi_df = styled_multi_df.apply(highlight_total, axis=1)
     else:
-        total_dict[("All Data", "")] = "Grand Total"
+        # No filters: original table only
+        styled_multi_df = multi_df.style.format(formatter=format_numeric, na_rep='')
+        if style_cols:
+            styled_multi_df = styled_multi_df.map(color_impact, subset=pd.IndexSlice[:, style_cols])
+
     
     # R1/R2/Diff from stats grand totals
     for m in metrics_with_subcols:
@@ -338,6 +372,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
