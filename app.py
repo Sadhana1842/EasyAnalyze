@@ -145,10 +145,10 @@ if uploaded_file:
             "CSAT%": (grouped["Sum of CSAT_Num"].sum()*100.0 / grouped["Sum of SurveyCount"].sum()) if grouped["Sum of SurveyCount"].sum() else 0.0,
         })
 
-        grouped = grouped[group_cols + ["Sum of SurveyCount", "Sum of SurveyCount2", "TCR%", "CSAT%", "Weightage (Sumproduct)"]]
-        # Append Grand Total ONLY when grouping exists
+        # Only append total row when grouping exists
         if not (len(group_cols) == 1 and group_cols[0] == "All Data"):
             grouped = pd.concat([grouped, total_row.to_frame().T], ignore_index=True)
+
         return grouped
 
     try:
@@ -204,16 +204,14 @@ if uploaded_file:
 
     multi_df = pd.DataFrame(data_dict)
     multi_df.columns = pd.MultiIndex.from_tuples(multi_df.columns)
-    
-    # 🔧 CHANGE 1: remove rounding that caused inaccuracy
-    # multi_df.loc[:, numeric_cols] = multi_df.loc[:, numeric_cols].round(2)
 
-    # 🔧 CHANGE 2: column-aware formatter
+    # ------------------- Styling -------------------
     def format_numeric(val, col=None):
         try:
             num = float(val)
-            if col and ("%" in col[0] or col[0] == "Sum of SurveyCount2"):
-                return f"{num:.2f}"
+            if col and "%" in col[0]:
+                return f"{num:.2f}%"
+            return f"{num:.2f}"
         except (ValueError, TypeError):
             return str(val)
 
@@ -221,10 +219,9 @@ if uploaded_file:
         {col: (lambda v, c=col: format_numeric(v, c)) for col in multi_df.columns},
         na_rep=''
     )
-    
+
     diff_cols = [col for col in multi_df.columns if col[1] == "Diff"]
-    style_cols = diff_cols
-    
+
     def color_impact(val):
         try:
             num_val = float(val)
@@ -235,64 +232,53 @@ if uploaded_file:
         except:
             pass
         return ''
-    
-    if style_cols:
-        styled_multi_df = styled_multi_df.map(color_impact, subset=pd.IndexSlice[:, style_cols])
-    
-    if len(group_cols) > 0:
-        total_dict = {(group_cols[0], ""): "Grand Total"}
-        
-        for m in metrics_with_subcols:
-            total_dict[(m, "R1")] = stats1.iloc[-1][m]
-            total_dict[(m, "R2")] = stats2.iloc[-1][m]
-            total_dict[(m, "Diff")] = stats2.iloc[-1][m] - stats1.iloc[-1][m]
-    
-        if 'Mix Shift Impact' in merged.columns:
-            total_dict[("Mix Shift Impact", "")] = merged["Mix Shift Impact"].sum()
-        if 'Score Impact' in merged.columns:
-            total_dict[("Score Impact", "")] = merged["Score Impact"].sum()
-    
-        total_df = pd.DataFrame([total_dict])
-        total_df.columns = pd.MultiIndex.from_tuples(total_dict.keys())
-        
-        display_df = pd.concat([multi_df, total_df], ignore_index=True)
-        styled_multi_df = display_df.style.format(
-            {col: (lambda v, c=col: format_numeric(v, c)) for col in display_df.columns},
-            na_rep=''
-        )
-        
-        if style_cols:
-            styled_multi_df = styled_multi_df.map(color_impact, subset=pd.IndexSlice[:, style_cols])
-        
-        def highlight_total(row):
-            styles = []
-            is_total = row.name == len(multi_df)
-        
-            for col in row.index:
-                if not is_total:
-                    styles.append('')
-                else:
-                    # ⚠️ Do NOT override Diff column background
-                    if col[1] == "Diff":
-                        styles.append('font-weight: bold')
-                    else:
-                        styles.append('font-weight: bold; background-color: #f9f9f9; color: black')
-        
-            return styles
 
-        
-        styled_multi_df = styled_multi_df.apply(highlight_total, axis=1)
+    if diff_cols:
+        styled_multi_df = styled_multi_df.map(color_impact, subset=pd.IndexSlice[:, diff_cols])
+
+    # ------------------- Grand Total row for table -------------------
+    # Always create a total row for the multi-index table
+    if group_cols:
+        total_label = "Grand Total"
+        total_key = (group_cols[0], "")
     else:
-        styled_multi_df = multi_df.style.format(
-            {col: (lambda v, c=col: format_numeric(v, c)) for col in multi_df.columns},
-            na_rep=''
-        )
-        if style_cols:
-            styled_multi_df = styled_multi_df.map(color_impact, subset=pd.IndexSlice[:, style_cols])
-    
+        total_label = "Grand Total"
+        total_key = ("", "")
+
+    total_dict = {total_key: total_label}
+
+    for m in metrics_with_subcols:
+        total_dict[(m, "R1")] = stats1.iloc[-1][m]
+        total_dict[(m, "R2")] = stats2.iloc[-1][m]
+        total_dict[(m, "Diff")] = stats2.iloc[-1][m] - stats1.iloc[-1][m]
+
+    for m in impact_metrics:
+        total_dict[(m, "")] = merged[m].sum() if not merged.empty else 0.0
+
+    total_df = pd.DataFrame([total_dict])
+    total_df.columns = pd.MultiIndex.from_tuples(total_dict.keys())
+
+    display_df = pd.concat([multi_df, total_df], ignore_index=True)
+
+    styled_multi_df = display_df.style.format(
+        {col: (lambda v, c=col: format_numeric(v, c)) for col in display_df.columns},
+        na_rep=''
+    )
+
+    if diff_cols:
+        styled_multi_df = styled_multi_df.map(color_impact, subset=pd.IndexSlice[:, diff_cols])
+
+    def highlight_total(row):
+        if row.name == len(display_df) - 1:
+            return ['font-weight: bold; background-color: #f9f9f9; color: black'] * len(row)
+        return [''] * len(row)
+
+    styled_multi_df = styled_multi_df.apply(highlight_total, axis=1)
+
     st.subheader("Comparison Table 📚")
     st.dataframe(styled_multi_df, use_container_width=True)
 
+    # ------------------- Cards below -------------------
     grand_total_1 = stats1.iloc[-1:]
     grand_total_2 = stats2.iloc[-1:]
 
@@ -302,8 +288,8 @@ if uploaded_file:
             f"<div style='background-color:grey; padding:7px; font-weight:bold;'>"
             f"Grand Total - Range 1:<br>"
             f"SurveyCount: {grand_total_1['Sum of SurveyCount'].values[0]}<br>"
-            f"TCR%: {grand_total_1['TCR%'].values[0].round(2)} %<br>"
-            f"CSAT%: {grand_total_1['CSAT%'].values[0].round(2)} %</div>",
+            f"TCR%: {grand_total_1['TCR%'].values[0]:.2f}%<br>"
+            f"CSAT%: {grand_total_1['CSAT%'].values[0]:.2f}%</div>",
             unsafe_allow_html=True,
         )
     with col2:
@@ -311,8 +297,8 @@ if uploaded_file:
             f"<div style='background-color:grey; padding:10px; font-weight:bold;'>"
             f"Grand Total - Range 2:<br>"
             f"SurveyCount: {grand_total_2['Sum of SurveyCount'].values[0]}<br>"
-            f"TCR%: {grand_total_2['TCR%'].values[0].round(2)} %<br>"
-            f"CSAT%: {grand_total_2['CSAT%'].values[0].round(2)} %</div>",
+            f"TCR%: {grand_total_2['TCR%'].values[0]:.2f}%<br>"
+            f"CSAT%: {grand_total_2['CSAT%'].values[0]:.2f}%</div>",
             unsafe_allow_html=True,
         )
 
@@ -337,10 +323,4 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
-
-
-
-
-
-
 
