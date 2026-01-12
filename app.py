@@ -146,7 +146,9 @@ if uploaded_file:
         })
 
         grouped = grouped[group_cols + ["Sum of SurveyCount", "Sum of SurveyCount2", "TCR%", "CSAT%", "Weightage (Sumproduct)"]]
-        grouped = pd.concat([grouped, total_row.to_frame().T], ignore_index=True)
+        # Append Grand Total ONLY when grouping exists
+        if not (len(group_cols) == 1 and group_cols[0] == "All Data"):
+            grouped = pd.concat([grouped, total_row.to_frame().T], ignore_index=True)
         return grouped
 
     try:
@@ -335,6 +337,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
