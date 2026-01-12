@@ -187,8 +187,6 @@ if uploaded_file:
     multi_df = pd.DataFrame(data_dict)
     multi_df.columns = pd.MultiIndex.from_tuples(multi_df.columns)
 
-    multi_df = multi_df.sort_values(("Sum of SurveyCount2", "R2"), ascending=False)
-
     # Formatter with percentages for TCR, CSAT, and Sum of SurveyCount2
     def format_numeric(val, col=None):
         try:
@@ -294,6 +292,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
