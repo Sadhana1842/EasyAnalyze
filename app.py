@@ -204,28 +204,6 @@ if uploaded_file:
     multi_df = pd.DataFrame(data_dict)
     multi_df.columns = pd.MultiIndex.from_tuples(multi_df.columns)
 
-    # Add hover tooltips to columns
-    tooltip_dict = {}
-    for col in multi_df.columns:
-        col_name = col[0] if col[1] else ""
-        if "TCR%" in col_name:
-            tooltip_dict[col] = "TCR% = (TCR_Yes / SurveyCount) × 100"
-        elif "CSAT%" in col_name:
-            tooltip_dict[col] = "CSAT% = (CSAT_Num / SurveyCount) × 100"
-        elif "SurveyCount2" in col_name:
-            tooltip_dict[col] = "SurveyCount2 = (Group SurveyCount / Total SurveyCount) × 100"
-        elif "Weightage" in col_name:
-            tooltip_dict[col] = f"Weightage = SurveyCount2% × {'TCR%' if weightage_metric=='TCR' else 'CSAT%'}"
-        elif "Mix Shift Impact" in col_name:
-            tooltip_dict[col] = f"Mix Shift = {'TCR%' if weightage_metric=='TCR' else 'CSAT%'} R1 × SurveyCount2% R2"
-        elif "Score Impact" in col_name:
-            tooltip_dict[col] = f"Score Impact = SurveyCount2% R1 × {'TCR%' if weightage_metric=='TCR' else 'CSAT%'} R2"
-        else:
-            tooltip_dict[col] = col_name
-
-    
-    multi_df.attrs['tooltip'] = tooltip_dict
-
     # Formatter with percentages for TCR, CSAT, and Sum of SurveyCount2
     def format_numeric(val, col=None):
         try:
@@ -301,27 +279,6 @@ if uploaded_file:
 
 
         styled_multi_df = styled_multi_df.apply(highlight_total, axis=1)
-
-    #Markdown for hover effect
-    st.markdown("""
-        <style>
-        .stPlotlyChart .dataframe .row-heading:hover:after,
-        .stPlotlyChart .dataframe td:hover:after {
-            content: attr(data-tooltip);
-            position: absolute;
-            background: #333;
-            color: white;
-            padding: 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            white-space: nowrap;
-            z-index: 1000;
-            top: -35px;
-            left: 50%;
-            transform: translateX(-50%);
-        }
-        </style>
-        """, unsafe_allow_html=True)
     
 
     st.subheader("Comparison Table 📚")
@@ -353,6 +310,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
