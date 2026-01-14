@@ -311,7 +311,27 @@ if uploaded_file:
 else:
     st.info("Upload an Excel file to get started.")
 
-
+# Legends - always visible in sidebar
+with st.sidebar.expander("📋 Column Legends", expanded=False):
+    st.markdown("""
+    **Sum of SurveyCount**: Raw survey count per group
+    
+    **Sum of SurveyCount2**: (Group Survey / Total Survey) × 100%
+    
+    **TCR%**: (TCR_Yes / SurveyCount) × 100%
+    
+    **CSAT%**: (CSAT_Num / SurveyCount) × 100%
+    
+    **Weightage**: SurveyCount2% × **TCR%** (or **CSAT%** based on toggle)
+    
+    **Mix Shift Impact**: Metric_R1 × SurveyCount2%_R2
+    
+    **Score Impact**: SurveyCount2%_R1 × Metric_R2
+    
+    **R1/R2**: Date Range 1/2 values
+    
+    **Diff**: R2 - R1
+    """)
 
 
 
