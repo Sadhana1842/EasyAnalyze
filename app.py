@@ -101,7 +101,7 @@ if uploaded_file:
             filtered_df = filtered_df[filtered_df[dim].astype(str) == str(val)]
     # ---------------- FILTERING LOGIC END ----------------
     
-    def calc_group_stats(dataframe, start_date, end_date, group_cols):
+    def calc_group_stats(dataframe, start_date, end_date, group_cols,weightage_metric):
         mask = (dataframe["recordeddate"] >= pd.to_datetime(start_date)) &\
                (dataframe["recordeddate"] <= pd.to_datetime(end_date))
         filtered = dataframe.loc[mask].copy()
@@ -136,7 +136,6 @@ if uploaded_file:
             lambda r: (r["Sum of TCR_Yes"]*100.0/r["Sum of SurveyCount"]) if r["Sum of SurveyCount"] else 0.0, axis=1)
         grouped["CSAT%"] = grouped.apply(
             lambda r: (r["Sum of CSAT_Num"]*100.0/r["Sum of SurveyCount"]) if r["Sum of SurveyCount"] else 0.0, axis=1)
-        grouped["Weightage (Sumproduct)"] = ((grouped["Sum of SurveyCount2"]/100)*grouped["TCR%"]).round(4)
         #Weightage metric Toggle
         if weightage_metric == "TCR":
             grouped["Weightage (Sumproduct)"] = ((grouped["Sum of SurveyCount2"]/100)*grouped["TCR%"]).round(4)
@@ -160,8 +159,8 @@ if uploaded_file:
     active_keys = list(st.session_state.active_filters.keys())
     group_cols = active_keys if active_keys else []
 
-    stats1 = calc_group_stats(filtered_df, date_range1[0], date_range1[1], group_cols)
-    stats2 = calc_group_stats(filtered_df, date_range2[0], date_range2[1], group_cols)
+    stats1 = calc_group_stats(filtered_df, date_range1[0], date_range1[1], group_cols,weightage_metric)
+    stats2 = calc_group_stats(filtered_df, date_range2[0], date_range2[1], group_cols,weightage_metric)
 
     base1 = stats1.iloc[:-1].reset_index(drop=True)
     base2 = stats2.iloc[:-1].reset_index(drop=True)
@@ -305,6 +304,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
