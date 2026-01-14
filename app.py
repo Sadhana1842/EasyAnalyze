@@ -53,16 +53,16 @@ if uploaded_file:
             if col not in st.session_state.active_filters:
                 st.session_state.active_filters[col] = None
                 st.rerun()
-
+    #toggle for weigthate metric
+    weightage_metric = st.sidebar.radio(
+    "Weightage Metric",
+    ["TCR", "CSAT"],
+    key="weightage_toggle",
+    horizontal=True
+    )
+    
     if st.session_state.active_filters:
         st.sidebar.markdown("### Active Filters 🔍")
-        weightage_metric = st.sidebar.radio(
-            "Weightage Metric",
-            ["TCR", "CSAT"],
-            key="weightage_toggle",
-            horizontal=True
-        )
-        
         for dim in list(st.session_state.active_filters.keys()):
             mask = pd.Series(True, index=df.index)
             for other_dim, other_val in st.session_state.active_filters.items():
@@ -101,7 +101,7 @@ if uploaded_file:
             filtered_df = filtered_df[filtered_df[dim].astype(str) == str(val)]
     # ---------------- FILTERING LOGIC END ----------------
     
-    def calc_group_stats(dataframe, start_date, end_date, group_cols,weightage_metric):
+    def calc_group_stats(dataframe, start_date, end_date, group_cols, weightage_metric):
         mask = (dataframe["recordeddate"] >= pd.to_datetime(start_date)) &\
                (dataframe["recordeddate"] <= pd.to_datetime(end_date))
         filtered = dataframe.loc[mask].copy()
@@ -304,6 +304,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
