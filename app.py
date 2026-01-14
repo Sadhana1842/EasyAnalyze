@@ -56,6 +56,13 @@ if uploaded_file:
 
     if st.session_state.active_filters:
         st.sidebar.markdown("### Active Filters 🔍")
+        weightage_metric = st.sidebar.radio(
+            "Weightage Metric",
+            ["TCR", "CSAT"],
+            key="weightage_toggle",
+            horizontal=True
+        )
+        
         for dim in list(st.session_state.active_filters.keys()):
             mask = pd.Series(True, index=df.index)
             for other_dim, other_val in st.session_state.active_filters.items():
@@ -129,7 +136,13 @@ if uploaded_file:
             lambda r: (r["Sum of TCR_Yes"]*100.0/r["Sum of SurveyCount"]) if r["Sum of SurveyCount"] else 0.0, axis=1)
         grouped["CSAT%"] = grouped.apply(
             lambda r: (r["Sum of CSAT_Num"]*100.0/r["Sum of SurveyCount"]) if r["Sum of SurveyCount"] else 0.0, axis=1)
-        grouped["Weightage (Sumproduct)"] = ((grouped["Sum of SurveyCount2"]/100)*grouped["TCR%"]).round(4)
+        
+        #Weightage metric Toggle
+        if weightage_metric == "TCR":
+            grouped["Weightage (Sumproduct)"] = ((grouped["Sum of SurveyCount2"]/100)*grouped["TCR%"]).round(4)
+        else:
+            grouped["Weightage (Sumproduct)"] = ((grouped["Sum of SurveyCount2"]/100)*grouped["CSAT%"]).round(4)
+
 
         # Total row already included here
         total_row = pd.Series({
@@ -292,6 +305,7 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
 
 
 
