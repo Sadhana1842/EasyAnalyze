@@ -317,16 +317,18 @@ with legends_container:
     st.markdown("---")
     with st.expander("📋 Column Legends", expanded=False):
         st.markdown("""
-        **Sum of SurveyCount**: Raw survey count per group
-        **Sum of SurveyCount2**: (Group Survey / Total Survey) × 100%
-        **TCR%**: (TCR_Yes / SurveyCount) × 100%
-        **CSAT%**: (CSAT_Num / SurveyCount) × 100%
-        **Weightage**: SurveyCount2% × **TCR%** (or **CSAT%** based on toggle)
-        **Mix Shift Impact**: Metric_R1 × SurveyCount2%_R2
-        **Score Impact**: SurveyCount2%_R1 × Metric_R2
-        **R1/R2**: Date Range 1/2 values
-        **Diff**: R2 - R1
-        """)
+        **Sum of SurveyCount**: Raw survey count per group <br>
+        **Sum of SurveyCount2**: (Group Survey / Total Survey) × 100% <br>
+        **TCR%**: (TCR_Yes / SurveyCount) × 100% <br>
+        **CSAT%**: (CSAT_Num / SurveyCount) × 100% <br>
+        **Weightage**: SurveyCount2% × **TCR%** (or **CSAT%** based on toggle) <br>
+        **Mix Shift Impact**: Metric_R1 × SurveyCount2%_R2 <br>
+        **Score Impact**: SurveyCount2%_R1 × Metric_R2 <br>
+        **R1/R2**: Date Range 1/2 values <br>
+        **Diff**: R2 - R1 <br>
+        """,
+        unsafe_allow_html=True)
+
 
 
 
