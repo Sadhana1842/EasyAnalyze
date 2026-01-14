@@ -325,17 +325,21 @@ with legends_container:
         
         **CSAT%**: (CSAT_Num / SurveyCount) × 100% <br>
         
-        **Weightage**: Weighted Contribution of each group's TCR/CSAT (SurveyCount2% × **TCR%** (or **CSAT%** based on toggle)) <br>
+        **Weightage**: Weighted Contribution of each group's TCR/CSAT <br> (SurveyCount2% × **TCR%** (or **CSAT%** based on toggle)) <br>
         
-        **Mix Shift Impact**: Effect of Change in Survey Sample (Metric_R1 × SurveyCount2%_R2) <br>
         
-        **Score Impact**: Effect of Change in Score (TCR/CSAT) (SurveyCount2%_R1 × Metric_R2) <br>
+        **Mix Shift Impact**: Effect of Change in Survey Sample <br> (Metric_R1 × SurveyCount2%_R2) <br>
+        
+        
+        **Score Impact**: Effect of Change in Score (TCR/CSAT) <br> (SurveyCount2%_R1 × Metric_R2) <br>
+        
         
         **R1/R2**: Date Range 1/2 values <br>
         
         **Diff**: R2 - R1 <br>
         """,
         unsafe_allow_html=True)
+
 
 
 
