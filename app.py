@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from collections import OrderedDict
-
+# --------------------- BLOCK 1: File Loading and Data Prep ------------------------------------
 st.set_page_config(page_title="HP EasyAnalyze", layout="wide", page_icon="🧊")
 st.title("HP EasyAnalyze 🧊")
 
@@ -16,7 +16,8 @@ if uploaded_file:
     
     min_date = df["recordeddate"].min()
     max_date = df["recordeddate"].max()
-
+# -----------------------BLOCK 1 ENDS ------------------------------------------------------
+# -----------------------BLOCK 2: UI/Date Setup -------------------------------------------
     st.sidebar.write("Please select date ranges 🗓️")
     date_range1 = st.sidebar.date_input(
         "Date Range 1",
@@ -30,8 +31,8 @@ if uploaded_file:
         min_value=min_date,
         max_value=max_date,
     )
-    
-    # ---------------- FILTERING LOGIC START ----------------
+# ----------------------BLOCK 2 ENDS -------------------------------------------------------
+# ---------------------- BLOCK 3: DYNAMIC FILTERING LOGIC ----------------------------------
     restricted_cols = [
         "recordeddate",
         "Sum of SurveyCount",
@@ -53,6 +54,7 @@ if uploaded_file:
             if col not in st.session_state.active_filters:
                 st.session_state.active_filters[col] = None
                 st.rerun()
+    # ------------------ WEIGHTAGE TOGGLE STORED IN SESSION STAET VIA KEY (PLACEMENT?) --------           
     #toggle for weigthate metric
     weightage_metric = st.sidebar.radio(
     "Weightage Metric",
@@ -60,6 +62,7 @@ if uploaded_file:
     key="weightage_toggle",
     horizontal=True
     )
+    # ------------------------------------------------------------------------------------------
     
     if st.session_state.active_filters:
         st.sidebar.markdown("### Active Filters 🔍")
@@ -339,6 +342,7 @@ with legends_container:
         **Diff**: R2 - R1 <br>
         """,
         unsafe_allow_html=True)
+
 
 
 
