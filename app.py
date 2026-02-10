@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from collections import OrderedDict
-
+# -------------------------BLOCK 1: File Loading and Data Prep --------------------------------
 st.set_page_config(page_title="HP EasyAnalyze", layout="wide", page_icon="🧊")
 st.title("HP EasyAnalyze 🧊")
 
@@ -17,7 +17,8 @@ if uploaded_file:
     
     min_date = df["recordeddate"].min()
     max_date = df["recordeddate"].max()
-
+# -------------------------------------BLOCK 1 END-----------------------------------------------------
+# ------------------------------------ BLOCK 2:UI/Date Setup ---------------------------------   
     st.sidebar.write("Please select date ranges 🗓️")
     date_range1 = st.sidebar.date_input(
         "Date Range 1",
@@ -308,3 +309,4 @@ if uploaded_file:
 
 else:
     st.info("Upload an Excel file to get started.")
+
