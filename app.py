@@ -102,8 +102,8 @@ if uploaded_file:
     for dim, val in st.session_state.active_filters.items():
         if val is not None:
             filtered_df = filtered_df[filtered_df[dim].astype(str) == str(val)]
-    # ---------------- FILTERING LOGIC END ----------------
-    
+# ---------------- BLOCK 3 FILTERING LOGIC END ------------------------------------------------------------------------------
+# -----------------BLOCK 4: STATS CALCULATION AND MERGING----------------------------------------------
     def calc_group_stats(dataframe, start_date, end_date, group_cols, weightage_metric):
         mask = (dataframe["recordeddate"] >= pd.to_datetime(start_date)) &\
                (dataframe["recordeddate"] <= pd.to_datetime(end_date))
@@ -161,7 +161,8 @@ if uploaded_file:
 
     active_keys = list(st.session_state.active_filters.keys())
     group_cols = active_keys if active_keys else []
-
+# -------------------------------BLOCK 3 ENDS----------------------------------------------------------------------
+# -------------------------------BLOCK 4: STATS CALCULATION AND MERGING -------------------------------------------
     stats1 = calc_group_stats(filtered_df, date_range1[0], date_range1[1], group_cols,weightage_metric)
     stats2 = calc_group_stats(filtered_df, date_range2[0], date_range2[1], group_cols,weightage_metric)
 
@@ -342,6 +343,7 @@ with legends_container:
         **Diff**: R2 - R1 <br>
         """,
         unsafe_allow_html=True)
+
 
 
 
