@@ -283,7 +283,8 @@ if uploaded_file:
 
 
         styled_multi_df = styled_multi_df.apply(highlight_total, axis=1)
-    
+# ---------------------------BLOCK 4 ENDS -------------------------------------------------
+# ---------------------------BLOCK 5: RESULTS DISPLAY -------------------------------------
 
     st.subheader("Comparison Table 📚")
     st.dataframe(styled_multi_df, use_container_width=True)
@@ -344,6 +345,7 @@ with legends_container:
         """,
         unsafe_allow_html=True)
 
+# -----------------------------------BLOCK 5 ENDS ----------------------------------------------------------------------------------------
 
 
 
