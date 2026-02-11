@@ -161,8 +161,7 @@ if uploaded_file:
 
     active_keys = list(st.session_state.active_filters.keys())
     group_cols = active_keys if active_keys else []
-# -------------------------------BLOCK 3 ENDS----------------------------------------------------------------------
-# -------------------------------BLOCK 4: STATS CALCULATION AND MERGING -------------------------------------------
+
     stats1 = calc_group_stats(filtered_df, date_range1[0], date_range1[1], group_cols,weightage_metric)
     stats2 = calc_group_stats(filtered_df, date_range2[0], date_range2[1], group_cols,weightage_metric)
 
@@ -346,6 +345,7 @@ with legends_container:
         unsafe_allow_html=True)
 
 # -----------------------------------BLOCK 5 ENDS ----------------------------------------------------------------------------------------
+
 
 
 
